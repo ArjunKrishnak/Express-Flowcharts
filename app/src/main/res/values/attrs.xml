@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="Graph">
+        <attr name="NodeColor" format="color"/>
+        <attr name="EdgeColor" format="color"/>
+        <attr name="EdgeStrokeWidth" format="integer"/>
+    </declare-styleable>
+</resources>
