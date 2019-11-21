@@ -43,5 +43,11 @@ public interface MindMapDrawable {
      * @return a JSONObject representation of this MindMapDrawable
      */
     JSONObject toJson();
+
+    /**
+     * @return a Unique String Id of this MindMapDrawable
+     */
+    String getId();
+
 }
 

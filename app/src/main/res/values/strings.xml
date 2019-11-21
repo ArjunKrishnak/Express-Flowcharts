@@ -1,3 +1,35 @@
 <resources>
     <string name="app_name">GraphNetwork</string>
+
+    <!--Saving Alert Dialog-->
+    <string name="file_name_hint">Enter File Name</string>
+    <string name="save_as">Save As&#8230;</string>
+    <string name="done_str">Done</string>
+    <string name="cancel_str">Cancel</string>
+    <string name="save_successful">Save successful</string>
+    <string name="save_error">Error saving. Please try again</string>
+
+    <!--Overwriting Alert Dialog-->
+    <string name="overwrite_dialog_title">File Already Exists</string>
+    <string name="overwrite_dialog_body">The already exists, would you like to overwrite it?</string>
+
+    <!--Changes Pending Alert Dialog-->
+    <string name="changes_pending_dialog_title">Changes Pending</string>
+    <string name="changes_pending_dialog_body">You have unsaved changes, are you sure you want to continue?</string>
+
+    <!--Misc-->
+    <string name="yes_str">Yes</string>
+    <string name="no_str">No</string>
+    <string name="ok_str">OK</string>
+
+    <!--Loading-->
+    <string name="pick_file_title">Pick a File</string>
+    <string name="load_error">Error loading. Please try again</string>
+    <string name="load_list_error">Could not load items</string>
+
+    <string name="no_mindmap_items_dialog_title">No Saved Files</string>
+    <string name="no_mindmap_items_dialog_body">There are no MindMap files saved on your device.</string>
+
+
+
 </resources>

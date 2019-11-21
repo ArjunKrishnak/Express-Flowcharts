@@ -5,11 +5,16 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.util.Log;
 
 import org.json.JSONObject;
 
+import java.util.List;
+
 
 public class Edge implements MindMapDrawable{
+
+    private static final String TAG = "Edge";
 
     int mEdgeColor,mEdgeStrokeWidth;
     private static final int DEFAULT_STROKE_WIDTH = 12,DEFAULT_EDGE_COLOR = Color.RED;
@@ -22,6 +27,7 @@ public class Edge implements MindMapDrawable{
     private Node mToNode;
     private MainView mParentView;
     private float mCurrentScale = 1f;
+    private String mId;
 
 
     private float mStartX,mStartY,mEndX,mEndY;
@@ -33,9 +39,21 @@ public class Edge implements MindMapDrawable{
     Edge(float startX,float startY,float endX,float endY,MainView parent){
         setStart(startX,startY);
         setEnd(endX,endY);
-
         init(parent);
     }
+
+    Edge(Node fromNode,Node toNode,String Id){
+        float[] startXY = (fromNode).centre();
+        float[] endXY = (toNode).centre();
+        setStart(startXY[0],startXY[1]);
+        setEnd(endXY[0],endXY[1]);
+        setFromNode(fromNode);
+        setToNode(toNode);
+        init( null );
+        MakeEditable(false);
+        mId = Id;
+    }
+
     public void setFromNode(Node fromNode){
         mFromNode = fromNode;
     }
@@ -57,6 +75,7 @@ public class Edge implements MindMapDrawable{
     }
 
     private void init(MainView parent){
+        mId = FileHelper.getUniqueID();
         mParentView = parent;
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setStyle(Paint.Style.STROKE);
@@ -68,11 +87,12 @@ public class Edge implements MindMapDrawable{
         mStartCursorPath = new Path();
         mEndCursorPath = new Path();
         mPaint.setColor(DEFAULT_EDGE_COLOR);
-        mCurrentScale = mParentView.mScaleFactor;
+        if(mParentView!=null) //TODO delete mParentView?
+            mCurrentScale = mParentView.mScaleFactor;
         mEdgeStrokeWidth = (int)(DEFAULT_STROKE_WIDTH*mCurrentScale);
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
         mCursorPaint.setColor(DEFAULT_EDGE_COLOR);
-        mEditable = true;
+        mEditable = true; //TODO take it out of init
     }
 
     public void draw(Canvas canvas) {
@@ -117,10 +137,6 @@ public class Edge implements MindMapDrawable{
         if((slope*x - y + mStartY-slope*mStartX)/Math.sqrt(1+slope*slope)<=5*DEFAULT_STROKE_WIDTH)
             return true;
         return false;
-    }
-
-    public JSONObject toJson(){
-        return null;
     }
 
     @Override
@@ -168,4 +184,67 @@ public class Edge implements MindMapDrawable{
         mEdgeStrokeWidth = (int)(mEdgeStrokeWidth*scaleFactor);
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
     }
+
+    @Override
+    public String getId(){
+        return mId;
+    }
+
+    /**
+     * Json representation of this UmlBentArrow
+     *
+     * @return a JSONObject containing all the information needed to save and load
+     */
+
+    @Override
+    public JSONObject toJson() {
+        try {
+            JSONObject obj = new JSONObject();
+
+            obj.put(FileHelper.ITEM_TYPE_KEY, getClass().getName());
+            obj.put("cd_arrow_start", this.mFromNode.getId());
+            obj.put("cd_arrow_end", this.mToNode.getId());
+            obj.put(FileHelper.ITEM_ID_KEY, this.getId());
+            return obj;
+
+        } catch (Exception e) {
+            Log.e(TAG, "toJson: ", e);
+            return null;
+        }
+    }
+
+    /**
+     * Get a UmlBentArrow from a saved JSONObject representing a UmlBentArrow
+     *
+     * @param jsonObject     representing a UmlBentArrow
+     * @param alldrDrawables all possible shapes this UmlBentArrow can point to/from
+     * @return a new UmlBentArrow
+     */
+    public static Edge fromJson(JSONObject jsonObject,
+                                        List<MindMapDrawable> alldrDrawables) {
+        try {
+
+
+            Node startNode = null;
+            Node endNode = null;
+            String startShapeId = jsonObject.getString("cd_arrow_start");
+            String endShapeId = jsonObject.getString("cd_arrow_end");
+
+            for (MindMapDrawable shape : alldrDrawables) {
+                if (shape instanceof Node) {
+                    if (shape.getId().equals(startShapeId)) startNode = (Node) shape;
+                    if (shape.getId().equals(endShapeId)) endNode = (Node) shape;
+                }
+            }
+
+            //return a new arrow if we found both the items
+            return (startNode == null || endNode == null) ? null
+                    : new Edge(startNode, endNode,jsonObject.getString(FileHelper.ITEM_ID_KEY) );
+        } catch (Exception e) {
+            Log.e(TAG, "fromJson: ", e);
+            return null;
+        }
+    }
+
+
 }

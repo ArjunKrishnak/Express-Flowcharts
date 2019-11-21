@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -17,13 +18,16 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 
 enum ViewTask{
     MOVE_NODE,EDIT_NODE,SHOW_CONNECTED,
     MOVE_EDGE,EDIT_EDGE,
-    SWIPE_SCREEN,ZOOM_SCREEN,
+    PAN_SCREEN,ZOOM_SCREEN,
     IDLE;
 }
 enum DrawableType{
@@ -58,12 +62,77 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     float mMaxScale = 4f;
     float mScaleFactor = 1f;
 
+    /** used for saving file */
+    public static final String ITEMS_KEY = "items";
+    private static final String FILE_TYPE = "class_diagram";
+    private boolean savePending = false;
+
+    private static final String TAG = "MainView";
+
+
+    /**
+     * Removes all items and "clears the working space"
+     * THIS SHOULD ONLY BE CALLED AFTER USER'S CONSENT
+     */
+    public void resetSpace() {
+        //TODO check if any resetting is missed.
+        mAllViewDrawables.clear();
+        mSelected = null;
+        mClicked = null;
+        mLongClicked = null;
+        mEdge = null;
+        savePending = false;
+        postInvalidate();
+    }
+
+    /**
+     * @return true if there is a change pending to be saved, false otherwise
+     */
+    public boolean getSavePending() {
+        return savePending;
+    }
+
+    /**
+     * @param savePending new boolean whether change is pending
+     */
+    public void setSavePending(boolean savePending) {
+        this.savePending = savePending;
+    }
+
     void zoom(float scale){
         mViewTask = ViewTask.ZOOM_SCREEN;
         mScaleFactor *= scale;
         mScaleFactor = Math.max(mMinScale,Math.min(mMaxScale,mScaleFactor));
         scaleDrawables();
+        mViewTask = ViewTask.IDLE;
     }
+
+    public boolean isEmpty() {
+        return this.mAllViewDrawables.isEmpty();
+    }
+
+    /**
+     * @return a JSONObject that contains all the information of this editor
+     */
+    public JSONObject toJson() {
+        try {
+            JSONArray arr = new JSONArray();
+            for (MindMapDrawable drawable : mAllViewDrawables)
+                arr.put(drawable.toJson());
+
+            JSONObject obj = new JSONObject();
+            obj.put(FileHelper.FILE_TYPE_KEY, FILE_TYPE);
+            obj.put(ITEMS_KEY, arr);
+
+            return obj;
+
+        } catch (Exception e) {
+            Toast.makeText(mContext, "Save error", Toast.LENGTH_LONG).show();
+            Log.e(TAG,"Save error",e);
+            return null;
+        }
+    }
+
 
     private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
         @Override
@@ -76,6 +145,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             mScaleFactor *= detector.getScaleFactor();
             mScaleFactor = Math.max(mMinScale,Math.min(mMaxScale,mScaleFactor));
             scaleDrawables();
+            mViewTask = ViewTask.IDLE;
             return true;
         }
     }
@@ -131,6 +201,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
 
     public void addDrawable(MindMapDrawable drawable) {
         mAllViewDrawables.add(drawable);
+        savePending = true;
         postInvalidate();
     }
 
@@ -147,7 +218,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         int action = event.getActionMasked();
         switch (action) {
             case MotionEvent.ACTION_POINTER_DOWN:
-                mViewTask = ViewTask.SWIPE_SCREEN;//take precedence over all other actions
+                mViewTask = ViewTask.PAN_SCREEN;//take precedence over all other actions
                 mSwipeDownX = event.getX(0);//take first finger as reference by default getX() is getX(0)
                 mSwipeDownY = event.getY(0);
                 break;
@@ -164,7 +235,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 float moveX = event.getX();
                 float moveY = event.getY();
 
-                if(mViewTask == ViewTask.SWIPE_SCREEN){//TODO Stat moving only after we cross a threshold for detecting gesture
+                if(mViewTask == ViewTask.PAN_SCREEN){//TODO Stat moving only after we cross a threshold for detecting gesture
                     mShiftX = moveX-mSwipeDownX;
                     mShiftY = moveY-mSwipeDownY;
                     mSwipeDownX = moveX;
@@ -181,17 +252,19 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 if(mViewTask == ViewTask.MOVE_NODE) {
                     Node selectedNode = (Node) mSelected;
                     moveNode(selectedNode,moveX,moveY);
+                    savePending = true;
                     postInvalidate();
                     return true;
                 }
                 else if(mViewTask==ViewTask.MOVE_EDGE){
                     mEdge.setEnd(moveX,moveY);
+                    savePending = true;
                     postInvalidate();
                     return true;
                 }
                 break;
             case MotionEvent.ACTION_UP:
-                if(mViewTask == ViewTask.SWIPE_SCREEN){
+                if(mViewTask == ViewTask.PAN_SCREEN){
                     mViewTask = ViewTask.IDLE;
                     return true;
                 }
@@ -213,6 +286,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     }
                     mEdge = null;
                     mViewTask = ViewTask.IDLE;
+                    savePending = true;
                     postInvalidate();
                     return true;
                 }
@@ -241,6 +315,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                        mEdge.setFromNode((Node)mClicked);
                        mAllViewDrawables.add( mEdge );
                        mViewTask = ViewTask.MOVE_EDGE;
+                       savePending = true;
                        postInvalidate();
                    }
                }
@@ -366,6 +441,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             }
             mAllViewDrawables.remove(item);
         }
+        savePending = true;
         postInvalidate();
     }
 
@@ -388,6 +464,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         for (MindMapDrawable drawable : mAllViewDrawables) {
             drawable.move(mShiftX,mShiftY);
         }
+        savePending = true;
         postInvalidate();
     }
 
@@ -395,7 +472,15 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         for (MindMapDrawable drawable : mAllViewDrawables) {
             drawable.scale(mScaleFactor);
         }
+        savePending = true;
         postInvalidate();
+    }
+
+    /**
+     * @return an ArrayList contianing all the drawables
+     */
+    public ArrayList<MindMapDrawable> getAllClassDrawables() {
+        return mAllViewDrawables;
     }
 
 

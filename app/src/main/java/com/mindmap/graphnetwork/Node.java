@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.util.Log;
 import android.view.View;
 
 import org.json.JSONObject;
@@ -20,6 +21,13 @@ public class Node implements MindMapDrawable{
     private float mX,mY,mR;
     private MainView mParentView;
     private float mCurrentScale = 1f;
+    private static final String TAG = "Node";
+    private String mId;
+
+    @Override
+    public String getId(){
+        return mId;
+    }
 
 //    public Node(Context context) {
 //       super(context);
@@ -29,13 +37,22 @@ public class Node implements MindMapDrawable{
         return DrawableType.NODE;
     }
 
+    public Node(float x,float y,float r,String id){
+        this(x,y,null);
+        this.mId = id;
+        //this.mR = r; //TODO add radius here
+    }
+
+
     public Node(float x,float y,MainView parentView) {
+        mId = FileHelper.getUniqueID();
         mPath = new Path();
         setParentView(parentView);
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mNodeColor = DEFAULT_NODE_COLOR;
         mPaint.setColor(mNodeColor);
-        mCurrentScale = parentView.mScaleFactor;
+        if(parentView!=null)//TODO delete mParentView?
+            mCurrentScale = parentView.mScaleFactor;
         mR = mCurrentScale*DEFAULT_NODE_RADIUS;
         set(x,y);
     }
@@ -77,10 +94,6 @@ public class Node implements MindMapDrawable{
     }
 
 
-    public JSONObject toJson(){
-        return null;
-    }
-
     public void setParentView(MainView parentView){
         mParentView = parentView;
     }
@@ -112,4 +125,44 @@ public class Node implements MindMapDrawable{
         mX=mX+shiftX;
         mY=mY+shiftY;
     }
+
+    @Override
+    /**
+     * @return a JSON representation of this Node
+     */
+    public JSONObject toJson() {
+        try {
+            JSONObject obj = new JSONObject();
+
+            obj.put(FileHelper.ITEM_TYPE_KEY, getClass().getName());
+            obj.put(FileHelper.LOC_X_KEY, this.mX);
+            obj.put(FileHelper.LOC_Y_KEY, this.mY);
+            obj.put(FileHelper.ITEM_ID_KEY, this.getId());
+
+            return obj;
+
+        } catch (Exception e) {
+            Log.e(TAG, "toJson: ", e);
+            return null;
+        }
+    }
+
+    /**
+     * get a UmlNoteNode from a JSONObject
+     *
+     * @param obj JSONObject representation of a UmlNoteNode
+     * @return a Node of the given JSONObject
+     */
+    public static Node fromJson(JSONObject obj) {
+        try {
+//            return new Node(obj.getString("cdn_text"), (float) obj.getDouble(FileHelper.LOC_X_KEY),
+//                    (float) obj.getDouble(FileHelper.LOC_Y_KEY));
+            return new Node((float) obj.getDouble(FileHelper.LOC_X_KEY),(float) obj.getDouble(FileHelper.LOC_Y_KEY),DEFAULT_NODE_RADIUS,
+                            (String) obj.getString(FileHelper.ITEM_ID_KEY));
+        } catch (Exception e) {
+            Log.e(TAG, "fromJson: ", e);
+            return null;
+        }
+    }
+
 }
