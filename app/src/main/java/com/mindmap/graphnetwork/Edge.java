@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -130,39 +131,39 @@ public class Edge implements MindMapDrawable{
 
         //comparing perpendicular distance from the line
         if(mStartX==mEndX) {
-            if (x - mStartX <= 5*DEFAULT_STROKE_WIDTH)
+            if (x - mStartX <= 5*mEdgeStrokeWidth)
                 return true;
             return false;
         }
         float slope = (mEndY - mStartY)/(mEndX - mStartX);
-        if((slope*x - y + mStartY-slope*mStartX)/Math.sqrt(1+slope*slope)<=5*DEFAULT_STROKE_WIDTH)
+        if((slope*x - y + mStartY-slope*mStartX)/Math.sqrt(1+slope*slope)<=5*mEdgeStrokeWidth)
             return true;
         return false;
     }
 
     @Override
     public boolean onScreen(float width, float height) {
-        return true;
-//        RectF boundPath;
-//        float slope;
-//        if(mStartX==mEndX)
-//            slope = 100;
-//        else
-//            slope = (mEndY - mStartY)/(mEndX - mStartX);
-//        if(slope>=1) {
-//            if (mStartX < mEndX)
-//                boundPath = new RectF( mStartX - DEFAULT_STROKE_WIDTH, mStartY, mEndX + DEFAULT_STROKE_WIDTH, mEndY );
-//            else
-//                boundPath = new RectF( mStartX + DEFAULT_STROKE_WIDTH, mStartY, mEndX - DEFAULT_STROKE_WIDTH, mEndY );
-//        }
-//        else {
-//            if (mStartY < mEndY)
-//                boundPath = new RectF( mStartX, mStartY - DEFAULT_STROKE_WIDTH, mEndX, mEndY+DEFAULT_STROKE_WIDTH );
-//            else
-//                boundPath = new RectF( mStartX, mStartY + DEFAULT_STROKE_WIDTH, mEndX, mEndY-DEFAULT_STROKE_WIDTH );
-//        }
-//        RectF boundView = new RectF(0,0,width,height);
-//        return boundPath.intersect(boundView);
+
+        RectF boundPath;
+        float slope;
+        if(mStartX==mEndX)
+            slope = 100;
+        else
+            slope = (mEndY - mStartY)/(mEndX - mStartX);
+        if(slope>=1) {
+            if (mStartX < mEndX)
+                boundPath = new RectF( mStartX - mEdgeStrokeWidth, mStartY, mEndX + mEdgeStrokeWidth, mEndY );
+            else
+                boundPath = new RectF( mStartX + mEdgeStrokeWidth, mStartY, mEndX - mEdgeStrokeWidth, mEndY );
+        }
+        else {
+            if (mStartY < mEndY)
+                boundPath = new RectF( mStartX, mStartY - mEdgeStrokeWidth, mEndX, mEndY+mEdgeStrokeWidth );
+            else
+                boundPath = new RectF( mStartX, mStartY + mEdgeStrokeWidth, mEndX, mEndY-mEdgeStrokeWidth );
+        }
+        RectF boundView = new RectF(0,0,width,height);
+        return boundPath.intersect(boundView);
 
     }
 

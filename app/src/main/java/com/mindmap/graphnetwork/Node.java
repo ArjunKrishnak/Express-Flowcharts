@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -105,11 +106,9 @@ public class Node implements MindMapDrawable{
 
     @Override
     public boolean onScreen(float width, float height ) {
-        return true;
-//        final RectF boundCircle  = new RectF();
-//        mPath.computeBounds(boundCircle, true);
-//        final RectF boundView = new RectF(0,0,width,height);
-//        return boundCircle.intersect(boundView);
+        final RectF boundCircle  = new RectF(mX-mR,mY-mR,mX+mR,mY+mR);
+        final RectF boundView = new RectF(0,0,width,height);
+        return boundCircle.intersect(boundView);
     }
 
     @Override

@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
         addNodeButton.setOnTouchListener( new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                // save the X,Ycoordinates
+                // save the X,Ycoordinates //TODO get correct X,Y and introduce Drag and drop logic
                 if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                     mButtonX = event.getX();
                     mButtonY = event.getY();
@@ -71,21 +71,83 @@ public class MainActivity extends AppCompatActivity {
             }
         } );
 
-        Button saveButton = findViewById( R.id.save_button );
-        saveButton.setOnClickListener( new View.OnClickListener() {
+        Button fileButton =findViewById(R.id.file_button);
+        fileButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                saveFile();
+                fileDialog();
             }
         } );
+    }
 
-        Button loadButton = findViewById( R.id.load_button );
-        loadButton.setOnClickListener( new View.OnClickListener() {
+    /**
+     * Shows a dialog, lets the user choose file options
+     */
+    private void fileDialog() {
+        AlertDialog.Builder fileDialogBuilder = new AlertDialog.Builder(this);
+        fileDialogBuilder.setTitle(R.string.file);
+        fileDialogBuilder.setItems(R.array.file_options, new DialogInterface.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                loadFile();
+            public void onClick(DialogInterface dialog, int which) {
+                switch (which) {
+                    case 0:
+                        newWorkingArea();
+                        break;
+                    case 1:
+                        loadFile();
+                        break;
+                    case 2:
+                        saveFile();
+                        break;
+                    case 3:
+                        //exportPrompt(); //TODO add export functionality
+                        break;
+                    default:
+                        break;
+                }
             }
-        } );
+        });
+        fileDialogBuilder.setNegativeButton(R.string.cancel_str, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        fileDialogBuilder.show();
+    }
+
+    /**
+     * Prompt the user if they want to reset the working area
+     */
+    private void newWorkingArea() {
+        //only show the dialog if it makes sense to do so
+        if (!mMainView.isEmpty() && mMainView.getSavePending()) {
+
+            AlertDialog.Builder resetAreaDialog = new AlertDialog.Builder(this);
+            resetAreaDialog.setTitle(R.string.new_class_diagram_dialog_title);
+            //the message is dependent on if unsaved changes are present
+            resetAreaDialog.setMessage(mMainView.getSavePending() ? R.string.changes_pending_dialog_body
+                    : R.string.new_class_diagram_dialod_body);
+            resetAreaDialog.setNegativeButton(R.string.no_str, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss(); //do nothing, the user hit "no"
+                }
+            });
+            resetAreaDialog.setPositiveButton(R.string.yes_str, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    //reset the working area
+                    mMainView.setSavePending(false);
+                    mMainView.resetSpace();
+                }
+            });
+            resetAreaDialog.show();
+        }
+        else{
+            mMainView.setSavePending(false);
+            mMainView.resetSpace();
+        }
     }
 
     /**
