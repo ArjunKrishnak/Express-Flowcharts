@@ -53,6 +53,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     //Saved in Json
     private ArrayList<MindMapDrawable> mAllViewDrawables;
     float mScaleFactor = 1f;
+    float mChangeInscale = 1f;//TODO get rid of this?
 
     //Panning
     //coordinates to shift the Drawables by
@@ -63,6 +64,8 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
 
     //Scaling
     ScaleGestureDetector mScaleDetector;
+    float mScaleFocusX = 0f;
+    float mScaleFocusY = 0f;
     float MIN_SCALE = 0.25f;
     float MAX_SCALE = 4f;
 
@@ -88,6 +91,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         savePending = false;
         mScaleFactor = scale;
         postInvalidate();
+
     }
 
     /**
@@ -106,9 +110,13 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
 
     void zoom(float scale){
         mViewTask = ViewTask.ZOOM_SCREEN;
+        float oldScaleFactor = mScaleFactor;
         mScaleFactor *= scale;
         mScaleFactor = Math.max( MIN_SCALE,Math.min( MAX_SCALE,mScaleFactor));
-        scaleDrawables();
+        mChangeInscale = mScaleFactor/oldScaleFactor;
+        if(oldScaleFactor == mScaleFactor) // only need to scale otherwise
+            return;
+        scaleDrawables(getWidth()/2,getHeight()/2);
         mViewTask = ViewTask.IDLE;
     }
 
@@ -138,7 +146,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     }
 
 
-    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener { //TODO click and immediate drag recognized as scale why?
         @Override
         public boolean onScaleBegin(ScaleGestureDetector detector) {
             mViewTask = ViewTask.ZOOM_SCREEN;
@@ -146,11 +154,20 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         }
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
+            float oldScaleFactor = mScaleFactor;
             mScaleFactor *= detector.getScaleFactor();
             mScaleFactor = Math.max( MIN_SCALE,Math.min( MAX_SCALE,mScaleFactor));
-            scaleDrawables();
-            mViewTask = ViewTask.IDLE;
+            mChangeInscale = mScaleFactor/oldScaleFactor;
+            if(oldScaleFactor == mScaleFactor) // only need to scale otherwise
+                return true;
+            mScaleFocusX = detector.getFocusX();
+            mScaleFocusY = detector.getFocusY();
+            scaleDrawables(mScaleFocusX,mScaleFocusY);
             return true;
+        }
+        @Override
+        public void onScaleEnd(ScaleGestureDetector detector){
+            mViewTask = ViewTask.IDLE;
         }
     }
 
@@ -218,15 +235,17 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         super.onTouchEvent(event);
-        //mScaleDetector.onTouchEvent(event);
+        mScaleDetector.onTouchEvent(event);
         int action = event.getActionMasked();
         switch (action) {
             case MotionEvent.ACTION_POINTER_DOWN:
-                mViewTask = ViewTask.PAN_SCREEN;//take precedence over all other actions
-                mSwipeDownX = event.getX(0);//take first finger as reference by default getX() is getX(0)
+                mViewTask = ViewTask.PAN_SCREEN; //take precedence over all other actions
+                mSwipeDownX = event.getX(0); //take first finger as reference by default getX() is getX(0)
                 mSwipeDownY = event.getY(0);
                 break;
             case MotionEvent.ACTION_DOWN:
+                if(mViewTask ==  ViewTask.PAN_SCREEN)
+                    break;
                 if(mViewTask == ViewTask.EDIT_NODE || mViewTask == ViewTask.EDIT_EDGE) {
                     mPopupWindow.dismiss();
                     mViewTask = ViewTask.IDLE;
@@ -239,7 +258,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 float moveX = event.getX();
                 float moveY = event.getY();
 
-                if(mViewTask == ViewTask.PAN_SCREEN){//TODO Stat moving only after we cross a threshold for detecting gesture
+                if(mViewTask == ViewTask.PAN_SCREEN){//TODO Stat moving only after we cross a threshold for detecting gesture? why is dragging so sluggish?
                     mShiftX = moveX-mSwipeDownX;
                     mShiftY = moveY-mSwipeDownY;
                     mSwipeDownX = moveX;
@@ -267,6 +286,11 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     return true;
                 }
                 break;
+            case MotionEvent.ACTION_POINTER_UP:
+                if(mViewTask == ViewTask.PAN_SCREEN){
+                    mViewTask = ViewTask.IDLE;
+                    return true;
+                }
             case MotionEvent.ACTION_UP:
                 if(mViewTask == ViewTask.PAN_SCREEN){
                     mViewTask = ViewTask.IDLE;
@@ -472,12 +496,17 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         postInvalidate();
     }
 
-    public void scaleDrawables(){
+    public void scaleDrawables(float focusX,float focusY){
         for (MindMapDrawable drawable : mAllViewDrawables) {
             drawable.scale(mScaleFactor);
         }
-        savePending = true;
-        postInvalidate();
+        float scaledFocusX =  focusX*mChangeInscale;
+        float scaledFocusY =  focusY*mChangeInscale;
+        mShiftX = focusX - scaledFocusX;
+        mShiftY = focusY - scaledFocusY;
+        moveDrawables();
+//        savePending = true;
+//        postInvalidate();
     }
 
     /**

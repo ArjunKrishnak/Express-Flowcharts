@@ -18,7 +18,8 @@ public class Edge implements MindMapDrawable{
 
     //Saved in Json
     private String mId;
-    int mEdgeColor,mEdgeStrokeWidth;
+    int mEdgeColor;
+    float mEdgeStrokeWidth;
     private Node mFromNode;
     private Node mToNode;
     //Not Saved in Json
@@ -144,24 +145,24 @@ public class Edge implements MindMapDrawable{
     @Override
     public boolean onScreen(float width, float height) {
 
-        RectF boundPath;
-        float slope;
-        if(mStartX==mEndX)
-            slope = 100;
-        else
-            slope = (mEndY - mStartY)/(mEndX - mStartX);
-        if(slope>=1) {
-            if (mStartX < mEndX)
-                boundPath = new RectF( mStartX - mEdgeStrokeWidth, mStartY, mEndX + mEdgeStrokeWidth, mEndY );
-            else
-                boundPath = new RectF( mStartX + mEdgeStrokeWidth, mStartY, mEndX - mEdgeStrokeWidth, mEndY );
+        float left,top,right,bottom;
+        if(mStartX<mEndX) {
+            left = mStartX;
+            right = mEndX;
         }
         else {
-            if (mStartY < mEndY)
-                boundPath = new RectF( mStartX, mStartY - mEdgeStrokeWidth, mEndX, mEndY+mEdgeStrokeWidth );
-            else
-                boundPath = new RectF( mStartX, mStartY + mEdgeStrokeWidth, mEndX, mEndY-mEdgeStrokeWidth );
+            left = mEndX;
+            right = mStartX;
         }
+        if(mStartY<mEndY) {
+            top = mStartY;
+            bottom = mEndY;
+        }
+        else {
+            top = mEndY;
+            bottom = mStartY;
+        }
+        RectF boundPath = new RectF(left-mEdgeStrokeWidth,top-mEdgeStrokeWidth,right+mEdgeStrokeWidth,bottom+mEdgeStrokeWidth);
         RectF boundView = new RectF(0,0,width,height);
         return boundPath.intersect(boundView);
 
@@ -183,7 +184,7 @@ public class Edge implements MindMapDrawable{
         mStartY*=scaleFactor;
         mEndY*=scaleFactor;
         mCurrentScale = scale;
-        mEdgeStrokeWidth = (int)(mEdgeStrokeWidth*scaleFactor);
+        mEdgeStrokeWidth = mEdgeStrokeWidth*scaleFactor;
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
     }
 
