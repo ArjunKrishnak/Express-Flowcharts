@@ -1,58 +1,56 @@
 package com.mindmap.graphnetwork;
 
-import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Rect;
-import android.graphics.RectF;
 import android.util.Log;
-import android.view.View;
+
+import androidx.annotation.NonNull;
 
 import org.json.JSONObject;
 
 public class Node implements MindMapDrawable{
+    private static final String TAG = "Node";
+
+    //Saved in Json
+    int mNodeColor;
+    private float mX,mY,mR;
+    private String mId;
+    //Not Saved in Json
     Paint mPaint;
     Path mPath;
-    int mNodeColor;
     private static final int DEFAULT_NODE_COLOR = Color.BLUE;
     private static final float DEFAULT_NODE_RADIUS = 100;
-    private float mX,mY,mR;
+    //Node state variables
     private MainView mParentView;
     private float mCurrentScale = 1f;
-    private static final String TAG = "Node";
-    private String mId;
 
     @Override
     public String getId(){
         return mId;
     }
 
-//    public Node(Context context) {
-//       super(context);
-//    }
     @Override
     public DrawableType type(){
         return DrawableType.NODE;
     }
 
-    public Node(float x,float y,float r,String id){
-        this(x,y,null);
+    public Node(float x,float y,float r,String id,MainView parent){
+        this(x,y,parent);
         this.mId = id;
-        //this.mR = r; //TODO add radius here
+        this.mR = r;
     }
 
 
     public Node(float x,float y,MainView parentView) {
-        mId = FileHelper.getUniqueID();
+        mId = JsonHelper.getUniqueID();
         mPath = new Path();
         setParentView(parentView);
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mNodeColor = DEFAULT_NODE_COLOR;
         mPaint.setColor(mNodeColor);
-        if(parentView!=null)//TODO delete mParentView?
-            mCurrentScale = parentView.mScaleFactor;
+        mCurrentScale = parentView.mScaleFactor;
         mR = mCurrentScale*DEFAULT_NODE_RADIUS;
         set(x,y);
     }
@@ -70,12 +68,6 @@ public class Node implements MindMapDrawable{
             return true;
         return false;
     }
-
-//    @Override
-//    protected void onDraw(Canvas canvas){
-//        super.onDraw(canvas);
-//        canvas.drawCircle(mX, mY, mR, mPaint);
-//    }
 
     @Override
     public void draw(Canvas canvas){
@@ -133,12 +125,11 @@ public class Node implements MindMapDrawable{
     public JSONObject toJson() {
         try {
             JSONObject obj = new JSONObject();
-
-            obj.put(FileHelper.ITEM_TYPE_KEY, getClass().getName());
-            obj.put(FileHelper.LOC_X_KEY, this.mX);
-            obj.put(FileHelper.LOC_Y_KEY, this.mY);
-            obj.put(FileHelper.ITEM_ID_KEY, this.getId());
-
+            obj.put( JsonHelper.ITEM_TYPE_KEY, getClass().getName()); // TODO change this to enum
+            obj.put( JsonHelper.NodeSchema.NODE_CENTRE_X_KEY, this.mX);
+            obj.put( JsonHelper.NodeSchema.NODE_CENTRE_Y_KEY, this.mY);
+            obj.put( JsonHelper.NodeSchema.NODE_RADIUS_KEY, this.mR);
+            obj.put( JsonHelper.ITEM_ID_KEY, this.getId());
             return obj;
 
         } catch (Exception e) {
@@ -153,12 +144,13 @@ public class Node implements MindMapDrawable{
      * @param obj JSONObject representation of a UmlNoteNode
      * @return a Node of the given JSONObject
      */
-    public static Node fromJson(JSONObject obj) {
+    public static Node fromJson(JSONObject obj,MainView view) {
         try {
-//            return new Node(obj.getString("cdn_text"), (float) obj.getDouble(FileHelper.LOC_X_KEY),
-//                    (float) obj.getDouble(FileHelper.LOC_Y_KEY));
-            return new Node((float) obj.getDouble(FileHelper.LOC_X_KEY),(float) obj.getDouble(FileHelper.LOC_Y_KEY),DEFAULT_NODE_RADIUS,
-                            (String) obj.getString(FileHelper.ITEM_ID_KEY));
+
+            return new Node((float) obj.getDouble( JsonHelper.NodeSchema.NODE_CENTRE_X_KEY),
+                            (float) obj.getDouble( JsonHelper.NodeSchema.NODE_CENTRE_Y_KEY),
+                            (float)obj.getDouble( JsonHelper.NodeSchema.NODE_RADIUS_KEY),
+                            obj.getString( JsonHelper.ITEM_ID_KEY),view);
         } catch (Exception e) {
             Log.e(TAG, "fromJson: ", e);
             return null;

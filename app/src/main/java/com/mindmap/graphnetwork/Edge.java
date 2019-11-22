@@ -4,7 +4,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.RectF;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -16,41 +15,45 @@ public class Edge implements MindMapDrawable{
 
     private static final String TAG = "Edge";
 
+    //Saved in Json
+    private String mId;
     int mEdgeColor,mEdgeStrokeWidth;
-    private static final int DEFAULT_STROKE_WIDTH = 12,DEFAULT_EDGE_COLOR = Color.RED;
-
-    private Path mPath,mStartCursorPath,mEndCursorPath;
-    private Paint mPaint,mCursorPaint;
-    private static final float CURSOR_RADIUS = 30,CURSOR_STROKE_WIDTH = 4f;
-    private boolean mEditable;
     private Node mFromNode;
     private Node mToNode;
+    //Not Saved in Json
+    private static final int DEFAULT_STROKE_WIDTH = 12,DEFAULT_EDGE_COLOR = Color.RED;
+    private static final float DEFAULT_CURSOR_RADIUS = 30, DEFAULT_CURSOR_STROKE_WIDTH = 4f;
+    private Path mPath,mStartCursorPath,mEndCursorPath;
+    private Paint mPaint,mCursorPaint;
+    //Edge state variables
+    private boolean mEditable;
     private MainView mParentView;
     private float mCurrentScale = 1f;
-    private String mId;
-
-
     private float mStartX,mStartY,mEndX,mEndY;
 
     public DrawableType type(){
         return DrawableType.EDGE;
     }
 
+    //Called from MainView
     Edge(float startX,float startY,float endX,float endY,MainView parent){
         setStart(startX,startY);
         setEnd(endX,endY);
         init(parent);
+        editable(true);
+        mId = JsonHelper.getUniqueID();
     }
 
-    Edge(Node fromNode,Node toNode,String Id){
+    //Called while decoding Json
+    Edge(Node fromNode,Node toNode,String Id,MainView parent){
         float[] startXY = (fromNode).centre();
         float[] endXY = (toNode).centre();
         setStart(startXY[0],startXY[1]);
         setEnd(endXY[0],endXY[1]);
         setFromNode(fromNode);
         setToNode(toNode);
-        init( null );
-        MakeEditable(false);
+        init( parent );
+        editable(false);
         mId = Id;
     }
 
@@ -61,7 +64,6 @@ public class Edge implements MindMapDrawable{
         mToNode = toNode;
     }
 
-
     public void setStart(float startX,float startY) {
         mStartX = startX;
         mStartY = startY;
@@ -70,12 +72,12 @@ public class Edge implements MindMapDrawable{
         mEndX = endX;
         mEndY = endY;
     }
-    public void MakeEditable(boolean state){
+
+    public void editable(boolean state){
         mEditable = state;
     }
 
     private void init(MainView parent){
-        mId = FileHelper.getUniqueID();
         mParentView = parent;
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setStyle(Paint.Style.STROKE);
@@ -83,16 +85,14 @@ public class Edge implements MindMapDrawable{
         mCursorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mCursorPaint.setStyle(Paint.Style.STROKE);
         mCursorPaint.setStrokeJoin(Paint.Join.MITER);
-        mCursorPaint.setStrokeWidth(CURSOR_STROKE_WIDTH);
+        mCursorPaint.setStrokeWidth( DEFAULT_CURSOR_STROKE_WIDTH );
         mStartCursorPath = new Path();
         mEndCursorPath = new Path();
         mPaint.setColor(DEFAULT_EDGE_COLOR);
-        if(mParentView!=null) //TODO delete mParentView?
-            mCurrentScale = mParentView.mScaleFactor;
+        mCurrentScale = mParentView.mScaleFactor;
         mEdgeStrokeWidth = (int)(DEFAULT_STROKE_WIDTH*mCurrentScale);
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
         mCursorPaint.setColor(DEFAULT_EDGE_COLOR);
-        mEditable = true; //TODO take it out of init
     }
 
     public void draw(Canvas canvas) {
@@ -103,11 +103,11 @@ public class Edge implements MindMapDrawable{
 
         if(mEditable) {
             mStartCursorPath.reset();
-            mStartCursorPath.addCircle( mStartX, mStartY, CURSOR_RADIUS, Path.Direction.CW );
+            mStartCursorPath.addCircle( mStartX, mStartY, DEFAULT_CURSOR_RADIUS, Path.Direction.CW );
             canvas.drawPath( mStartCursorPath, mCursorPaint );
 
             mEndCursorPath.reset();
-            mEndCursorPath.addCircle( mEndX, mEndY, CURSOR_RADIUS, Path.Direction.CW );
+            mEndCursorPath.addCircle( mEndX, mEndY, DEFAULT_CURSOR_RADIUS, Path.Direction.CW );
             canvas.drawPath( mEndCursorPath, mCursorPaint );
         }
     }
@@ -121,12 +121,13 @@ public class Edge implements MindMapDrawable{
 
     public boolean contains(float x, float y){
 //        if(Editable){
-//            if((x-mStartX)*(x-mStartX) + (y-mStartY)*(y-mStartY) <= 5*CURSOR_RADIUS*CURSOR_RADIUS)
+//            if((x-mStartX)*(x-mStartX) + (y-mStartY)*(y-mStartY) <= 5*DEFAULT_CURSOR_RADIUS*DEFAULT_CURSOR_RADIUS)
 //                return true;
-//            if((x-mEndX)*(x-mEndX) + (y-mEndY)*(y-mEndY) <= 5*CURSOR_RADIUS*CURSOR_RADIUS)
+//            if((x-mEndX)*(x-mEndX) + (y-mEndY)*(y-mEndY) <= 5*DEFAULT_CURSOR_RADIUS*DEFAULT_CURSOR_RADIUS)
 //                return true;
 //            return false;
 //        }
+
         //comparing perpendicular distance from the line
         if(mStartX==mEndX) {
             if (x - mStartX <= 5*DEFAULT_STROKE_WIDTH)
@@ -191,8 +192,7 @@ public class Edge implements MindMapDrawable{
     }
 
     /**
-     * Json representation of this UmlBentArrow
-     *
+     * Json representation of this Edge
      * @return a JSONObject containing all the information needed to save and load
      */
 
@@ -200,11 +200,11 @@ public class Edge implements MindMapDrawable{
     public JSONObject toJson() {
         try {
             JSONObject obj = new JSONObject();
-
-            obj.put(FileHelper.ITEM_TYPE_KEY, getClass().getName());
-            obj.put("cd_arrow_start", this.mFromNode.getId());
-            obj.put("cd_arrow_end", this.mToNode.getId());
-            obj.put(FileHelper.ITEM_ID_KEY, this.getId());
+            obj.put( JsonHelper.ITEM_TYPE_KEY, getClass().getName());
+            obj.put( JsonHelper.EdgeSchema.EDGE_START_NODE_KEY, this.mFromNode.getId());
+            obj.put( JsonHelper.EdgeSchema.EDGE_END_NODE_KEY, this.mToNode.getId());
+            obj.put( JsonHelper.EdgeSchema.EDGE_STROKE_WIDTH_KEY, this.mEdgeStrokeWidth);
+            obj.put( JsonHelper.ITEM_ID_KEY, this.getId());
             return obj;
 
         } catch (Exception e) {
@@ -220,15 +220,13 @@ public class Edge implements MindMapDrawable{
      * @param alldrDrawables all possible shapes this UmlBentArrow can point to/from
      * @return a new UmlBentArrow
      */
-    public static Edge fromJson(JSONObject jsonObject,
-                                        List<MindMapDrawable> alldrDrawables) {
+    public static Edge fromJson(JSONObject jsonObject, List<MindMapDrawable> alldrDrawables,MainView view) {
         try {
-
 
             Node startNode = null;
             Node endNode = null;
-            String startShapeId = jsonObject.getString("cd_arrow_start");
-            String endShapeId = jsonObject.getString("cd_arrow_end");
+            String startShapeId = jsonObject.getString(JsonHelper.EdgeSchema.EDGE_START_NODE_KEY);
+            String endShapeId = jsonObject.getString(JsonHelper.EdgeSchema.EDGE_END_NODE_KEY);
 
             for (MindMapDrawable shape : alldrDrawables) {
                 if (shape instanceof Node) {
@@ -239,7 +237,7 @@ public class Edge implements MindMapDrawable{
 
             //return a new arrow if we found both the items
             return (startNode == null || endNode == null) ? null
-                    : new Edge(startNode, endNode,jsonObject.getString(FileHelper.ITEM_ID_KEY) );
+                    : new Edge(startNode, endNode,jsonObject.getString( JsonHelper.ITEM_ID_KEY),view);
         } catch (Exception e) {
             Log.e(TAG, "fromJson: ", e);
             return null;

@@ -35,46 +35,50 @@ enum DrawableType{
 }
 
 public class MainView extends View implements View.OnClickListener,View.OnLongClickListener {
-    //Items: everything here needs to be saved/loaded
-    private ArrayList<MindMapDrawable> mAllViewDrawables;
-    private Context mContext = null;
-    private MindMapDrawable mSelected = null; //null means none are selected
-    private MindMapDrawable mClicked = null; //null means none are selected
-    private MindMapDrawable mLongClicked = null;
-    //constant for defining the maximum total time duration between the first click and second click that can be considered as double-click
-    private static final long MAX_DOUBLE_CLICK_DURATION = 500;
-    //variable for counting two successive up-down events
-    int mClickCount = 0;
-    Edge mEdge = null;
-    ViewTask mViewTask;
-    private float mDownX,mDownY;
-    private long mClickEnd = 0;
-    PopupWindow mPopupWindow;
 
+    private static final String TAG = "MainView";
+
+    //MainView state variables
+    private MindMapDrawable mSelected = null; //null means none are selected
+    private MindMapDrawable mClicked = null; //null means none are clicked
+    private MindMapDrawable mLongClicked = null; //null means none are long clicked
+    int mClickCount = 0; //variable for counting two successive up-down events
+    private long mClickEnd = 0; // click end time
+    Edge mEdge = null; //temporarily required for drawing drawing ege
+    ViewTask mViewTask; //Which task is currently executing
+    private float mDownX,mDownY; //press down X,Y
+    PopupWindow mPopupWindow; //popup that appears on long pressing drawable
+    private boolean savePending = false; //used for saving file
+
+    //Saved in Json
+    private ArrayList<MindMapDrawable> mAllViewDrawables;
+    float mScaleFactor = 1f;
+
+    //Panning
     //coordinates to shift the Drawables by
     public float mSwipeDownX=0f;
     public float mSwipeDownY=0f;
     public float mShiftX=0f;
     public float mShiftY=0f;
 
+    //Scaling
     ScaleGestureDetector mScaleDetector;
-    float mMinScale = 0.25f;
-    float mMaxScale = 4f;
-    float mScaleFactor = 1f;
+    float MIN_SCALE = 0.25f;
+    float MAX_SCALE = 4f;
 
-    /** used for saving file */
-    public static final String ITEMS_KEY = "items";
-    private static final String FILE_TYPE = "class_diagram";
-    private boolean savePending = false;
-
-    private static final String TAG = "MainView";
-
+    //Not Saved in Json
+    //constant for defining the maximum total time duration between the first click and second click that can be considered as double-click
+    private static final long MAX_DOUBLE_CLICK_DURATION = 500;
+    private Context mContext = null;
 
     /**
      * Removes all items and "clears the working space"
      * THIS SHOULD ONLY BE CALLED AFTER USER'S CONSENT
      */
-    public void resetSpace() {
+    public void resetSpace(){
+        resetSpace(1.0f);
+    }
+    public void resetSpace(float scale) {
         //TODO check if any resetting is missed.
         mAllViewDrawables.clear();
         mSelected = null;
@@ -82,6 +86,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         mLongClicked = null;
         mEdge = null;
         savePending = false;
+        mScaleFactor = scale;
         postInvalidate();
     }
 
@@ -102,7 +107,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     void zoom(float scale){
         mViewTask = ViewTask.ZOOM_SCREEN;
         mScaleFactor *= scale;
-        mScaleFactor = Math.max(mMinScale,Math.min(mMaxScale,mScaleFactor));
+        mScaleFactor = Math.max( MIN_SCALE,Math.min( MAX_SCALE,mScaleFactor));
         scaleDrawables();
         mViewTask = ViewTask.IDLE;
     }
@@ -121,9 +126,8 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 arr.put(drawable.toJson());
 
             JSONObject obj = new JSONObject();
-            obj.put(FileHelper.FILE_TYPE_KEY, FILE_TYPE);
-            obj.put(ITEMS_KEY, arr);
-
+            obj.put(JsonHelper.SCALE_KEY, this.mScaleFactor);
+            obj.put(JsonHelper.ITEMS_KEY, arr);
             return obj;
 
         } catch (Exception e) {
@@ -143,7 +147,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
             mScaleFactor *= detector.getScaleFactor();
-            mScaleFactor = Math.max(mMinScale,Math.min(mMaxScale,mScaleFactor));
+            mScaleFactor = Math.max( MIN_SCALE,Math.min( MAX_SCALE,mScaleFactor));
             scaleDrawables();
             mViewTask = ViewTask.IDLE;
             return true;
@@ -282,7 +286,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                         mEdge.setToNode(toNode);
                         float[] centreXY = (toNode).centre();
                         mEdge.setEnd(centreXY[0],centreXY[1]);
-                        mEdge.MakeEditable( false );
+                        mEdge.editable( false );
                     }
                     mEdge = null;
                     mViewTask = ViewTask.IDLE;

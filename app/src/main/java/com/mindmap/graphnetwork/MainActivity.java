@@ -3,16 +3,13 @@ package com.mindmap.graphnetwork;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.PopupMenu;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -25,7 +22,7 @@ public class MainActivity extends AppCompatActivity {
     private MainView mMainView;
     private float mButtonX,mButtonY;
     private static final String TAG = "MainActivity";
-    private FileHelper mFileHelper;
+    private JsonHelper mFileHelper;
 
 
     @Override
@@ -34,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView( R.layout.activity_main );
         mMainView = findViewById(R.id.MainViewID);
-        mFileHelper = new FileHelper(this);
+        mFileHelper = new JsonHelper(this);
 
         Button addNodeButton = findViewById( R.id.AddNodeButton );
         addNodeButton.setOnTouchListener( new View.OnTouchListener() {
@@ -105,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
         overwriteWarning.setPositiveButton(R.string.yes_str, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                if (FileHelper.writeFile(toWrite, destFile, getApplicationContext()))
+                if (JsonHelper.writeFile(toWrite, destFile, getApplicationContext()))
                     if (updateSavePending)
                         mMainView.setSavePending(false); //only call setSavePending if we're told to change it
             }
@@ -129,9 +126,8 @@ public class MainActivity extends AppCompatActivity {
     public void checkAndSaveJson(final JSONObject obj, final File destFile) {
         try {
 //            currentFile = destFile;
-
             if (!destFile.exists())
-                FileHelper.writeFile(obj, destFile, this);
+                JsonHelper.writeFile(obj, destFile, this);
             else //the file already exists, warn the user that it will be overwritten
                 warnOverwrite(obj, destFile, true);
         } catch (Exception e) {
@@ -150,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public void checkAndSaveJson(final JSONObject obj, String fileName) {
         checkAndSaveJson(obj, new File(mFileHelper.MIND_MAP_FOLDER.getAbsolutePath() + "/"
-                + fileName + FileHelper.EXTENSION));
+                + fileName + JsonHelper.EXTENSION));
     }
 
 
@@ -221,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
             //get all the .map files from the directory
             final File MindMapFiles[] = mFileHelper.MIND_MAP_FOLDER.listFiles(new FilenameFilter() {
                 public boolean accept(File dir, String name) {
-                    return name.toLowerCase().endsWith(FileHelper.EXTENSION.toLowerCase());
+                    return name.toLowerCase().endsWith( JsonHelper.EXTENSION.toLowerCase());
                 }
             });
 
@@ -230,7 +226,7 @@ public class MainActivity extends AppCompatActivity {
                 final String fileNames[] = new String[MindMapFiles.length];
                 for (int i = 0; i < MindMapFiles.length; i++)
                     fileNames[i] = MindMapFiles[i].getName().substring(0, MindMapFiles[i].getName().length()
-                            - FileHelper.EXTENSION.length());
+                            - JsonHelper.EXTENSION.length());
                 AlertDialog.Builder listBuilder = new AlertDialog.Builder(this);
 
                 listBuilder.setItems(fileNames, new DialogInterface.OnClickListener() {
@@ -273,19 +269,20 @@ public class MainActivity extends AppCompatActivity {
      * @param f File with saved state to fileLoad
      */
     private void loadFromFile(File f) {
-        JSONObject obj = FileHelper.getJsonFromFile(f, this); //create a JSONObject from the File
-        mMainView.resetSpace(); //clear the view
+        JSONObject obj = JsonHelper.getJsonFromFile(f, this); //create a JSONObject from the File
+
         //currentFile = f; //this is referenced later on in saveAs
         try {
+            mMainView.resetSpace((float)obj.getDouble(JsonHelper.SCALE_KEY)); //clear the view
             //get a JSONArray with all the items
-            JSONArray arr = obj.getJSONArray(mMainView.ITEMS_KEY);
+            JSONArray arr = obj.getJSONArray(JsonHelper.ITEMS_KEY);
 
             //for each item, add it to the view
             for (int i = 0; i < arr.length(); i++) {
-                if (arr.getJSONObject(i).getString(FileHelper.ITEM_TYPE_KEY).equals(Node.class.getName()))
-                    mMainView.addDrawable(Node.fromJson(arr.getJSONObject(i)));
-                else if (arr.getJSONObject(i).getString(FileHelper.ITEM_TYPE_KEY).equals(Edge.class.getName()))
-                    mMainView.addDrawable(Edge.fromJson(arr.getJSONObject(i),mMainView.getAllClassDrawables()));
+                if (arr.getJSONObject(i).getString( JsonHelper.ITEM_TYPE_KEY).equals(Node.class.getName()))
+                    mMainView.addDrawable(Node.fromJson(arr.getJSONObject(i),mMainView));
+                else if (arr.getJSONObject(i).getString( JsonHelper.ITEM_TYPE_KEY).equals(Edge.class.getName()))
+                    mMainView.addDrawable(Edge.fromJson(arr.getJSONObject(i),mMainView.getAllClassDrawables(),mMainView));
             }
 
             mMainView.setSavePending(false); //when we fileLoad, there are no more saves pending

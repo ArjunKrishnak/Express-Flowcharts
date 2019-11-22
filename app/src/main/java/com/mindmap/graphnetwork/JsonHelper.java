@@ -19,35 +19,43 @@ import java.util.UUID;
 /**
  * Use to manage Files, i.e. saving and loading
  */
-public final class FileHelper {
+public final class JsonHelper {
+    private static final String TAG = "JsonHelper";
+
     /** Location for all saved data*/
     public final File MIND_MAP_FOLDER;
-
     /** Location for all saved photos */
     public final File PICTURES_FOLDER;
-
     /** Extension for saved files */
     public static final String EXTENSION = ".map";
     /** Extension used for images */
     public static final String IMG_EXTENSION = ".png";
 
-    /** key used to get a file type (which editor) */
-    public static final String FILE_TYPE_KEY = "file_type";
+    /** key used to get an items */
+    public static final String ITEMS_KEY = "items";
+    /** key used to get an items */
+    public static final String SCALE_KEY = "scale";
     /** key used to get an item type */
-    public static final String ITEM_TYPE_KEY = "item_type";
-    /** key used to get an item type */
-    public static final String ITEM_ID_KEY = "item_id";
-    /** key used to get an item's location  */
-    public static final String LOC_X_KEY = "location_x";
-    /** key used to get an item's location  */
-    public static final String LOC_Y_KEY = "location_y";
+    public static final String ITEM_TYPE_KEY = "drawable_type";
+    /** key used to get an item id */
+    public static final String ITEM_ID_KEY = "drawable_id";
 
-    private static final String TAG = "FileHelper";
+    public class NodeSchema{
+        NodeSchema(){};
+        public static final String NODE_CENTRE_X_KEY = "node_centre_x";
+        public static final String NODE_CENTRE_Y_KEY = "node_centre_y";
+        public static final String NODE_RADIUS_KEY = "node_radius";
+    }
 
-    /**
-     * why was this private ctor in vdroid
-     */
-    public FileHelper(Context context) {
+    public class EdgeSchema{
+        EdgeSchema(){};
+        public static final String EDGE_START_NODE_KEY = "edge_start_node";
+        public static final String EDGE_END_NODE_KEY = "edge_end_node";
+        public static final String EDGE_STROKE_WIDTH_KEY = "edge_stroke_width";
+    }
+
+    //TODO why was this private ctor in vdroid
+    public JsonHelper(Context context) {
         MIND_MAP_FOLDER = new File(context.getExternalFilesDir(null).getAbsolutePath() + "/mindmap/");
         PICTURES_FOLDER = new File(context.getExternalFilesDir(null).getAbsolutePath() + "/pictures/");
         if (!MIND_MAP_FOLDER.exists())
