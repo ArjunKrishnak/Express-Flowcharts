@@ -39,7 +39,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     private static final String TAG = "MainView";
 
     //MainView state variables
-    private MindMapDrawable mSelected = null; //null means none are selected
     private MindMapDrawable mClicked = null; //null means none are clicked
     private MindMapDrawable mLongClicked = null; //null means none are long clicked
     int mClickCount = 0; //variable for counting two successive up-down events
@@ -49,11 +48,11 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     private float mDownX,mDownY; //press down X,Y
     PopupWindow mPopupWindow; //popup that appears on long pressing drawable
     private boolean savePending = false; //used for saving file
+    boolean mClickedNodeSelected = false;
 
     //Saved in Json
     private ArrayList<MindMapDrawable> mAllViewDrawables;
     float mScaleFactor = 1f;
-    float mChangeInscale = 1f;//TODO get rid of this?
 
     //Panning
     //coordinates to shift the Drawables by
@@ -68,6 +67,8 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     float mScaleFocusY = 0f;
     float MIN_SCALE = 0.25f;
     float MAX_SCALE = 4f;
+    float mChangeInscale = 1f;//TODO get rid of this?
+    MotionEvent mEvent;
 
     //Not Saved in Json
     //constant for defining the maximum total time duration between the first click and second click that can be considered as double-click
@@ -84,7 +85,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     public void resetSpace(float scale) {
         //TODO check if any resetting is missed.
         mAllViewDrawables.clear();
-        mSelected = null;
         mClicked = null;
         mLongClicked = null;
         mEdge = null;
@@ -146,9 +146,11 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     }
 
 
-    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener { //TODO click and immediate drag recognized as scale why?
+    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
         @Override
         public boolean onScaleBegin(ScaleGestureDetector detector) {
+            if(mEvent.getPointerCount() != 2)
+                return false; //fix for immediate drag recognized as scale
             mViewTask = ViewTask.ZOOM_SCREEN;
             return true;
         }
@@ -235,6 +237,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         super.onTouchEvent(event);
+        mEvent = event;
         mScaleDetector.onTouchEvent(event);
         int action = event.getActionMasked();
         switch (action) {
@@ -250,7 +253,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     mPopupWindow.dismiss();
                     mViewTask = ViewTask.IDLE;
                 }
-                mSelected = findItem(event.getX(), event.getY());
                 mDownX = event.getX();
                 mDownY = event.getY();
                 break;
@@ -267,13 +269,18 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     return true;
                 }
 
-                if(mSelected != mClicked || mSelected==null ) {
+                if(mClicked==null)
+                    mClickedNodeSelected = false;
+                else
+                    mClickedNodeSelected = mClickedNodeSelected || mClicked.contains( mDownX, mDownY );
+
+                if(!mClickedNodeSelected) {
                     Toast.makeText( mContext, "nothing to move", Toast.LENGTH_SHORT ).show();
                     return true;
                 }
 
                 if(mViewTask == ViewTask.MOVE_NODE) {
-                    Node selectedNode = (Node) mSelected;
+                    Node selectedNode = (Node) mClicked;
                     moveNode(selectedNode,moveX,moveY);
                     savePending = true;
                     postInvalidate();
@@ -296,8 +303,11 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     mViewTask = ViewTask.IDLE;
                     return true;
                 }
-                if(mViewTask == ViewTask.MOVE_NODE)
+                if(mViewTask == ViewTask.MOVE_NODE) {
                     mViewTask = ViewTask.IDLE;
+                    mClickedNodeSelected = false;
+                    return true;
+                }
                 if(mViewTask == ViewTask.MOVE_EDGE){
                     float upX = event.getX();
                     float upY = event.getY();
@@ -313,6 +323,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                         mEdge.editable( false );
                     }
                     mEdge = null;
+                    mClickedNodeSelected = false;
                     mViewTask = ViewTask.IDLE;
                     savePending = true;
                     postInvalidate();
