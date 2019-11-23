@@ -17,8 +17,6 @@
     <!--Saving Alert Dialog-->
     <string name="file_name_hint">Enter File Name</string>
     <string name="save_as">Save As&#8230;</string>
-    <string name="done_str">Done</string>
-    <string name="cancel_str">Cancel</string>
     <string name="save_successful">Save successful</string>
     <string name="save_error">Error saving. Please try again</string>
 
@@ -34,6 +32,8 @@
     <string name="yes_str">Yes</string>
     <string name="no_str">No</string>
     <string name="ok_str">OK</string>
+    <string name="done_str">Done</string>
+    <string name="cancel_str">Cancel</string>
 
     <!--Loading-->
     <string name="pick_file_title">Pick a File</string>
@@ -43,6 +43,11 @@
     <string name="no_mindmap_items_dialog_title">No Saved Files</string>
     <string name="no_mindmap_items_dialog_body">There are no MindMap files saved on your device.</string>
 
+    <!--New Or Edit node Alert Dialog-->
+    <string name="new_node">New Node</string>
+    <string name="node_name_hint">Enter Node Name</string>
+    <string name="node_description_hint">Enter Node Description</string>
+    <string name="edit_node">Edit Node</string>
 
 
 </resources>

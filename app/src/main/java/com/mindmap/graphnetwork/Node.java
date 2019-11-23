@@ -4,8 +4,10 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
@@ -18,14 +20,45 @@ public class Node implements MindMapDrawable{
     int mNodeColor;
     private float mX,mY,mR;
     private String mId;
+    private String mTitle = "Node";
+    private String mDescription  = "";
     //Not Saved in Json
     Paint mPaint;
     Path mPath;
+    Paint mTitlePaint;
     private static final int DEFAULT_NODE_COLOR = Color.BLUE;
-    private static final float DEFAULT_NODE_RADIUS = 100;
+    public static final float DEFAULT_NODE_RADIUS = 100;//making it available for MainActivity for new node creation
+    private static final int DEFAULT_TITLE_COLOR = Color.RED;
     //Node state variables
     private MainView mParentView;
     private float mCurrentScale = 1f;
+
+
+    public String getTitle(){
+        return mTitle;
+    }
+
+    public String getDescription(){
+        if(mDescription==null)
+            return "";
+        return mDescription;
+    }
+
+    public void setTitle(String title){
+        mTitle = title;
+        Rect boundTitle = new Rect();
+        mTitlePaint.getTextBounds(title, 0, title.length(), boundTitle);
+        //Expand the node as required by the title
+        if(2*mR<boundTitle.width())
+            mR = boundTitle.width()/2;
+    }
+
+    public void setDescription(String description){
+        if(description==null)
+            mDescription = "";
+        else
+            mDescription = description;
+    }
 
     @Override
     public String getId(){
@@ -37,14 +70,18 @@ public class Node implements MindMapDrawable{
         return DrawableType.NODE;
     }
 
-    public Node(float x,float y,float r,String id,MainView parent){
-        this(x,y,parent);
+    public Node(float x,float y,float r,String id,MainView parent,String title,String description){
+        this(x,y,parent,title,description);
         this.mId = id;
         this.mR = r;
     }
 
+    public Node(float x,float y,MainView parentView,String title,String description){
+        this(x,y,parentView,title);
+        setDescription(description);
+    }
 
-    public Node(float x,float y,MainView parentView) {
+    public Node(float x,float y,MainView parentView,String title) {
         mId = JsonHelper.getUniqueID();
         mPath = new Path();
         setParentView(parentView);
@@ -54,6 +91,11 @@ public class Node implements MindMapDrawable{
         mCurrentScale = parentView.mScaleFactor;
         mR = mCurrentScale*DEFAULT_NODE_RADIUS;
         set(x,y);
+        mTitlePaint= new Paint();
+        mTitlePaint.setColor( DEFAULT_TITLE_COLOR );
+        mTitlePaint.setTextSize(30);
+        mTitlePaint.setTextAlign(Paint.Align.CENTER);
+        setTitle(title);
     }
 
     public void set(float x, float y) {
@@ -75,6 +117,7 @@ public class Node implements MindMapDrawable{
         mPath.reset();
         mPath.addCircle( mX, mY, mR, Path.Direction.CW );
         canvas.drawPath(mPath, mPaint);
+        canvas.drawText(mTitle, mX, mY, mTitlePaint);
     }
 
     @Override
@@ -95,8 +138,6 @@ public class Node implements MindMapDrawable{
 
     }
 
-    public void openNode(){
-    }
 
     public float[] centre(){
         float[] centreXY = {mX,mY};
@@ -129,6 +170,8 @@ public class Node implements MindMapDrawable{
             obj.put( JsonHelper.NodeSchema.NODE_CENTRE_Y_KEY, this.mY);
             obj.put( JsonHelper.NodeSchema.NODE_RADIUS_KEY, this.mR);
             obj.put( JsonHelper.ITEM_ID_KEY, this.getId());
+            obj.put( JsonHelper.NodeSchema.NODE_TITLE_KEY,this.mTitle);
+            obj.put( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY,this.mDescription);
             return obj;
 
         } catch (Exception e) {
@@ -149,7 +192,9 @@ public class Node implements MindMapDrawable{
             return new Node((float) obj.getDouble( JsonHelper.NodeSchema.NODE_CENTRE_X_KEY),
                             (float) obj.getDouble( JsonHelper.NodeSchema.NODE_CENTRE_Y_KEY),
                             (float)obj.getDouble( JsonHelper.NodeSchema.NODE_RADIUS_KEY),
-                            obj.getString( JsonHelper.ITEM_ID_KEY),view);
+                            obj.getString( JsonHelper.ITEM_ID_KEY),view,
+                            obj.getString( JsonHelper.NodeSchema.NODE_TITLE_KEY),
+                            obj.getString( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY ));
         } catch (Exception e) {
             Log.e(TAG, "fromJson: ", e);
             return null;

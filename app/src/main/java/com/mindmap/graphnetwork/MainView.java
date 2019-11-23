@@ -1,7 +1,10 @@
 package com.mindmap.graphnetwork;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Canvas;
+import android.graphics.Point;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -11,6 +14,7 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.Toast;
@@ -74,6 +78,13 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     //constant for defining the maximum total time duration between the first click and second click that can be considered as double-click
     private static final long MAX_DOUBLE_CLICK_DURATION = 500;
     private Context mContext = null;
+    Point mNewButtonXY = new Point( 0,0 );
+
+    public void setNewButtonXY(Point newButtonXY){
+        if(mNewButtonXY==null)
+            mNewButtonXY = new Point(0,0);
+        mNewButtonXY = newButtonXY;
+    }
 
     /**
      * Removes all items and "clears the working space"
@@ -228,10 +239,10 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         postInvalidate();
     }
 
-    public void addNode(float x,float y){
+    public void addNode(float x,float y,String title,String description){
 //        Node node = new Node(mContext);
 //        node.initNode(x,y,this);
-        Node node = new Node(x,y,this);
+        Node node = new Node(x,y,this,title, description);
         addDrawable(node);
     }
     @Override
@@ -415,9 +426,9 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     OpenNodeButton.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            //Open Node
                             mPopupWindow.dismiss();
                             mViewTask = ViewTask.IDLE;
+                            newOrEditNodeDialog();
                         }
                     });
                 }
@@ -525,6 +536,55 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
      */
     public ArrayList<MindMapDrawable> getAllClassDrawables() {
         return mAllViewDrawables;
+    }
+
+    /**
+     * triggered while creating a new node or opening an existing node
+     */
+    public void newOrEditNodeDialog() {
+        final LinearLayout inputHolders = new LinearLayout(mContext);
+        inputHolders.setOrientation(LinearLayout.VERTICAL);
+
+        final EditText nodeNameEditText = new EditText( mContext );
+        nodeNameEditText.setHint( R.string.node_name_hint );
+        nodeNameEditText.setSingleLine();
+        final EditText nodeDescriptionEditText = new EditText( mContext );
+        nodeDescriptionEditText.setHint( R.string.node_description_hint );
+        inputHolders.addView(nodeNameEditText);
+        inputHolders.addView(nodeDescriptionEditText);
+
+        if (mLongClicked!=null) { //if we're openind a node, populate the dialog with the current contents
+            nodeNameEditText.setText(((Node) mLongClicked).getTitle());
+            nodeDescriptionEditText.setText(((Node) mLongClicked).getDescription());
+        }
+
+        final AlertDialog.Builder newOrEditNodeBuilder = new AlertDialog.Builder( mContext );
+
+        if (mLongClicked==null)
+            newOrEditNodeBuilder.setTitle( R.string.new_node );
+        else
+            newOrEditNodeBuilder.setTitle( R.string.edit_node );
+        newOrEditNodeBuilder.setView(inputHolders);
+        newOrEditNodeBuilder.setPositiveButton( R.string.done_str, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if(mLongClicked==null)
+                    addNode(mNewButtonXY.x,mNewButtonXY.y,nodeNameEditText.getText().toString(),nodeDescriptionEditText.getText().toString());
+                else{
+                    ((Node) mLongClicked).setTitle(nodeNameEditText.getText().toString());
+                    ((Node) mLongClicked).setDescription(nodeDescriptionEditText.getText().toString());
+                }
+                mLongClicked = null;
+            }
+        } );
+        newOrEditNodeBuilder.setNegativeButton( R.string.cancel_str, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                mLongClicked = null;
+            }
+        } );
+        newOrEditNodeBuilder.show();
     }
 
 

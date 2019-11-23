@@ -1,15 +1,17 @@
 package com.mindmap.graphnetwork;
 
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.graphics.Point;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -20,42 +22,47 @@ import java.io.FilenameFilter;
 
 public class MainActivity extends AppCompatActivity {
     private MainView mMainView;
-    private float mButtonX,mButtonY;
+    private Point mButtonXY;
     private static final String TAG = "MainActivity";
     private JsonHelper mFileHelper;
 
+    /** returns center top location of a view **/
+    private Point getViewLocation(View view) {
+        int[] location = new int[2];
+        view.getLocationOnScreen(location);
+        int x = location[0] + view.getWidth() / 2;
+        int y = location[1];
+        return new Point(x, y);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate( savedInstanceState );
+
+        // Hide the status bar.
+        View decorView = getWindow().getDecorView();
+        int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN;
+        decorView.setSystemUiVisibility(uiOptions);
+        // Hide action bar
+        ActionBar actionBar = getSupportActionBar();
+        actionBar.hide();
 
         setContentView( R.layout.activity_main );
         mMainView = findViewById(R.id.MainViewID);
         mFileHelper = new JsonHelper(this);
 
         Button addNodeButton = findViewById( R.id.AddNodeButton );
-        addNodeButton.setOnTouchListener( new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                // save the X,Ycoordinates //TODO get correct X,Y and introduce Drag and drop logic
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    mButtonX = event.getX();
-                    mButtonY = event.getY();
-                }
-                return false;
-            }
-        } );
         addNodeButton.setOnClickListener( new View.OnClickListener() {
-
             @Override
-            public void onClick(View v) {
-                mMainView.addNode(mButtonX,mButtonY);
+            public void onClick(View view) {
+                mButtonXY = getViewLocation(view);
+                mMainView.setNewButtonXY(mButtonXY);
+                mMainView.newOrEditNodeDialog();
             }
         } );
 
         Button zoomButton = findViewById( R.id.ZoomButton );
         zoomButton.setOnClickListener( new View.OnClickListener() {
-
             @Override
             public void onClick(View v) {
                 mMainView.zoom(2);
@@ -64,7 +71,6 @@ public class MainActivity extends AppCompatActivity {
 
         Button zoomOutButton = findViewById( R.id.zoomOutButton );
         zoomOutButton.setOnClickListener( new View.OnClickListener() {
-
             @Override
             public void onClick(View v) {
                 mMainView.zoom(0.5f);

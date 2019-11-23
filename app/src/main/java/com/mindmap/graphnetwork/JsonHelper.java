@@ -45,6 +45,8 @@ public final class JsonHelper {
         public static final String NODE_CENTRE_X_KEY = "node_centre_x";
         public static final String NODE_CENTRE_Y_KEY = "node_centre_y";
         public static final String NODE_RADIUS_KEY = "node_radius";
+        public static final String NODE_TITLE_KEY = "node_title";
+        public static final String NODE_DESCRIPTION_KEY = "node_description";
     }
 
     public class EdgeSchema{
