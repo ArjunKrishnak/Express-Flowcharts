@@ -49,5 +49,14 @@ public interface MindMapDrawable {
      */
     String getId();
 
+    String getTitle();
+    void setTitle(String title);
+
+    String getDescription();
+    void setDescription(String title);
+
+    int getColorID();
+    void setColorID(int colorID);
+
 }
 

@@ -2,13 +2,12 @@ package com.mindmap.graphnetwork;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.graphics.Canvas;
 import android.graphics.Point;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -16,7 +15,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -29,8 +28,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 enum ViewTask{
-    MOVE_NODE,EDIT_NODE,SHOW_CONNECTED,
-    MOVE_EDGE,EDIT_EDGE,
+    MOVE_NODE,SHOW_CONNECTED,
+    MOVE_EDGE,
+    DETAILS_WINDOW,
     PAN_SCREEN,ZOOM_SCREEN,
     IDLE;
 }
@@ -50,9 +50,9 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     Edge mEdge = null; //temporarily required for drawing drawing ege
     ViewTask mViewTask; //Which task is currently executing
     private float mDownX,mDownY; //press down X,Y
-    PopupWindow mPopupWindow; //popup that appears on long pressing drawable
     private boolean savePending = false; //used for saving file
     boolean mClickedNodeSelected = false;
+    private int mColorId;//selected color from details_window
 
     //Saved in Json
     private ArrayList<MindMapDrawable> mAllViewDrawables;
@@ -117,18 +117,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
      */
     public void setSavePending(boolean savePending) {
         this.savePending = savePending;
-    }
-
-    void zoom(float scale){
-        mViewTask = ViewTask.ZOOM_SCREEN;
-        float oldScaleFactor = mScaleFactor;
-        mScaleFactor *= scale;
-        mScaleFactor = Math.max( MIN_SCALE,Math.min( MAX_SCALE,mScaleFactor));
-        mChangeInscale = mScaleFactor/oldScaleFactor;
-        if(oldScaleFactor == mScaleFactor) // only need to scale otherwise
-            return;
-        scaleDrawables(getWidth()/2,getHeight()/2);
-        mViewTask = ViewTask.IDLE;
     }
 
     public boolean isEmpty() {
@@ -243,11 +231,16 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
 //        Node node = new Node(mContext);
 //        node.initNode(x,y,this);
         Node node = new Node(x,y,this,title, description);
+        node.set( x,y-node.getR() );//To make it display above the new node button
+        node.setColorID(mColorId);
         addDrawable(node);
     }
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         super.onTouchEvent(event);
+        if(mViewTask == ViewTask.DETAILS_WINDOW) {
+            return true;
+        }
         mEvent = event;
         mScaleDetector.onTouchEvent(event);
         int action = event.getActionMasked();
@@ -260,10 +253,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             case MotionEvent.ACTION_DOWN:
                 if(mViewTask ==  ViewTask.PAN_SCREEN)
                     break;
-                if(mViewTask == ViewTask.EDIT_NODE || mViewTask == ViewTask.EDIT_EDGE) {
-                    mPopupWindow.dismiss();
-                    mViewTask = ViewTask.IDLE;
-                }
                 mDownX = event.getX();
                 mDownY = event.getY();
                 break;
@@ -403,64 +392,162 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         if(mLongClicked==null)
             mLongClicked = findItem(mDownX, mDownY,DrawableType.EDGE);
 
-        if(mLongClicked!=null) {
-//            Toast.makeText( mContext, "Long Clicked", Toast.LENGTH_SHORT ).show();
-            if(mLongClicked instanceof Node) {
-                if( mViewTask == ViewTask.IDLE) {
-                    mViewTask = ViewTask.EDIT_NODE;
-
-                    LayoutInflater layoutInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                    View NodePopupLayout = layoutInflater.inflate(R.layout.node_popup_window,null);
-                    showPopUp(NodePopupLayout);
-
-                    Button DeleteNodeButton = NodePopupLayout.findViewById(R.id.DeleteNode);
-                    DeleteNodeButton.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            deleteItem(mLongClicked);
-                            mPopupWindow.dismiss();
-                            mViewTask = ViewTask.IDLE;
-                        }
-                    });
-                    Button OpenNodeButton = NodePopupLayout.findViewById(R.id.OpenNode);
-                    OpenNodeButton.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            mPopupWindow.dismiss();
-                            mViewTask = ViewTask.IDLE;
-                            newOrEditNodeDialog();
-                        }
-                    });
-                }
-            }
-            if(mLongClicked instanceof Edge) {
-                if( mViewTask == ViewTask.IDLE) {
-                    mViewTask = ViewTask.EDIT_EDGE;
-                    LayoutInflater layoutInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                    View NodePopupLayout = layoutInflater.inflate(R.layout.edge_popup_window,null);
-                    showPopUp(NodePopupLayout);
-
-                    Button DeleteEdgeButton = NodePopupLayout.findViewById(R.id.DeleteEdge);
-                    DeleteEdgeButton.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            deleteItem(mLongClicked);
-                            mPopupWindow.dismiss();
-                            mViewTask = ViewTask.IDLE;
-                        }
-                    });
-
-                }
-            }
+        if( mViewTask == ViewTask.IDLE) {
+            mViewTask = ViewTask.DETAILS_WINDOW;
+            showDetailsWindow();
         }
+
         return true;
     }
 
-    public void showPopUp(View view){
-        if(mPopupWindow!=null)
-            mPopupWindow.dismiss();
-        mPopupWindow= new PopupWindow(view, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        mPopupWindow.showAtLocation(this, Gravity.NO_GRAVITY, (int)mDownX, (int)mDownY);
+    public void showDetailsWindow(){
+
+        LayoutInflater layoutInflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View detailsLayout = layoutInflater.inflate(R.layout.details_window,null);
+        final AlertDialog.Builder detailsAlertBuilder = new AlertDialog.Builder( mContext );
+        detailsAlertBuilder.setView(detailsLayout);
+        final AlertDialog detailsAlertDialog = detailsAlertBuilder.create();
+
+        //if we're editing a drawable, populate the dialog with the current contents //TODO color part
+        final TextView TitleTextView = detailsLayout.findViewById(R.id.title_text_view);
+        if (mLongClicked==null)
+            TitleTextView.setText( R.string.new_node );
+        else {
+            if(mLongClicked instanceof Node)
+                TitleTextView.setText( R.string.edit_node );
+            else
+                TitleTextView.setText( R.string.edit_edge );
+        }
+
+        final EditText nameEditText = detailsLayout.findViewById(R.id.name_edit_text );
+        if (mLongClicked!=null)
+            nameEditText.setText(( mLongClicked).getTitle());
+        final EditText descriptionEditText = detailsLayout.findViewById(R.id.description_edit_text );
+        if (mLongClicked!=null)
+            descriptionEditText.setText((mLongClicked).getDescription());
+        final Button setButton = detailsLayout.findViewById(R.id.set_button );
+
+        setButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(mLongClicked==null)
+                    addNode(mDownX,mDownY,nameEditText.getText().toString(),descriptionEditText.getText().toString());
+                else{
+                    (mLongClicked).setTitle( nameEditText.getText().toString() );
+                    (mLongClicked).setDescription( descriptionEditText.getText().toString() );
+                    (mLongClicked).setColorID(mColorId);
+                }
+                mLongClicked = null;
+                mViewTask = ViewTask.IDLE;
+                detailsAlertDialog.dismiss();
+                postInvalidate();
+            }
+        });
+
+        if(mLongClicked!=null) { //only add delete button if we are editing
+            final Button deleteNodeButton = new Button( mContext );
+            deleteNodeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
+            deleteNodeButton.setText( R.string.delete_button );
+            deleteNodeButton.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    deleteItem( mLongClicked );
+                    mLongClicked = null;
+                    mViewTask = ViewTask.IDLE;
+                    detailsAlertDialog.dismiss();
+                }
+            } );
+
+            final LinearLayout buttonLinearLayout = detailsLayout.findViewById( R.id.button_linear_layout );
+            buttonLinearLayout.addView( deleteNodeButton );
+        }
+
+        final Button closeButton = detailsLayout.findViewById(R.id.close_button );
+        closeButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mLongClicked = null;
+                mViewTask = ViewTask.IDLE;
+                detailsAlertDialog.dismiss();
+            }
+        });
+
+        detailsLayout.findViewById(R.id.imageview_color_palette_pink).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+        detailsLayout.findViewById(R.id.imageview_color_palette_orange).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+
+        detailsLayout.findViewById(R.id.imageview_color_palette_magenta).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+
+        detailsLayout.findViewById(R.id.imageview_color_palette_grey).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+
+        detailsLayout.findViewById(R.id.imageview_color_palette_green).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+
+        detailsLayout.findViewById(R.id.imageview_color_palette_cyan).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+
+        detailsLayout.findViewById(R.id.imageview_color_palette_chartreuse).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+        detailsLayout.findViewById(R.id.imageview_color_palette_blue).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+        detailsLayout.findViewById(R.id.imageview_color_palette_black).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+        detailsLayout.findViewById(R.id.imageview_color_palette_sky_blue).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+        detailsLayout.findViewById(R.id.imageview_color_palette_yellow).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+        detailsLayout.findViewById(R.id.imageview_color_palette_spring_green).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+        detailsLayout.findViewById(R.id.imageview_color_palette_red).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+        detailsLayout.findViewById(R.id.imageview_color_palette_purple).setOnClickListener(  new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mColorId = ((ColorDrawable) view.getBackground()).getColor();
+            } });
+        detailsAlertDialog.show();
     }
 
 
@@ -537,55 +624,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     public ArrayList<MindMapDrawable> getAllClassDrawables() {
         return mAllViewDrawables;
     }
-
-    /**
-     * triggered while creating a new node or opening an existing node
-     */
-    public void newOrEditNodeDialog() {
-        final LinearLayout inputHolders = new LinearLayout(mContext);
-        inputHolders.setOrientation(LinearLayout.VERTICAL);
-
-        final EditText nodeNameEditText = new EditText( mContext );
-        nodeNameEditText.setHint( R.string.node_name_hint );
-        nodeNameEditText.setSingleLine();
-        final EditText nodeDescriptionEditText = new EditText( mContext );
-        nodeDescriptionEditText.setHint( R.string.node_description_hint );
-        inputHolders.addView(nodeNameEditText);
-        inputHolders.addView(nodeDescriptionEditText);
-
-        if (mLongClicked!=null) { //if we're openind a node, populate the dialog with the current contents
-            nodeNameEditText.setText(((Node) mLongClicked).getTitle());
-            nodeDescriptionEditText.setText(((Node) mLongClicked).getDescription());
-        }
-
-        final AlertDialog.Builder newOrEditNodeBuilder = new AlertDialog.Builder( mContext );
-
-        if (mLongClicked==null)
-            newOrEditNodeBuilder.setTitle( R.string.new_node );
-        else
-            newOrEditNodeBuilder.setTitle( R.string.edit_node );
-        newOrEditNodeBuilder.setView(inputHolders);
-        newOrEditNodeBuilder.setPositiveButton( R.string.done_str, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                if(mLongClicked==null)
-                    addNode(mNewButtonXY.x,mNewButtonXY.y,nodeNameEditText.getText().toString(),nodeDescriptionEditText.getText().toString());
-                else{
-                    ((Node) mLongClicked).setTitle(nodeNameEditText.getText().toString());
-                    ((Node) mLongClicked).setDescription(nodeDescriptionEditText.getText().toString());
-                }
-                mLongClicked = null;
-            }
-        } );
-        newOrEditNodeBuilder.setNegativeButton( R.string.cancel_str, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-                mLongClicked = null;
-            }
-        } );
-        newOrEditNodeBuilder.show();
-    }
-
+    
 
 }

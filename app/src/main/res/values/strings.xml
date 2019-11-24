@@ -8,6 +8,7 @@
         <item>Load</item>
         <item>Save</item>
         <item>Export</item>
+        <item>Delete</item>
     </string-array>
 
     <!--New Alert Dialog-->
@@ -45,9 +46,11 @@
 
     <!--New Or Edit node Alert Dialog-->
     <string name="new_node">New Node</string>
-    <string name="node_name_hint">Enter Node Name</string>
-    <string name="node_description_hint">Enter Node Description</string>
+    <string name="name_hint">Enter Name</string>
+    <string name="description_hint">Enter Description</string>
     <string name="edit_node">Edit Node</string>
+    <string name="edit_edge">Edit Edge</string>
+    <string name="delete_button">Delete</string>
 
 
 </resources>

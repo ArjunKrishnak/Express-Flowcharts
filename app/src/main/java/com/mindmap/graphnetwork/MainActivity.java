@@ -8,10 +8,13 @@ import android.content.DialogInterface;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.TableLayout;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -25,13 +28,15 @@ public class MainActivity extends AppCompatActivity {
     private Point mButtonXY;
     private static final String TAG = "MainActivity";
     private JsonHelper mFileHelper;
+    private File mCurrentFile = null;
+    PopupWindow mColorPallettePopupWindow;
 
-    /** returns center top location of a view **/
+    /** returns left top location of a view **/
     private Point getViewLocation(View view) {
         int[] location = new int[2];
         view.getLocationOnScreen(location);
-        int x = location[0] + view.getWidth() / 2;
-        int y = location[1];
+        int x = location[0] ;
+        int y = location[1] ;
         return new Point(x, y);
     }
 
@@ -50,32 +55,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView( R.layout.activity_main );
         mMainView = findViewById(R.id.MainViewID);
         mFileHelper = new JsonHelper(this);
-
-        Button addNodeButton = findViewById( R.id.AddNodeButton );
-        addNodeButton.setOnClickListener( new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mButtonXY = getViewLocation(view);
-                mMainView.setNewButtonXY(mButtonXY);
-                mMainView.newOrEditNodeDialog();
-            }
-        } );
-
-        Button zoomButton = findViewById( R.id.ZoomButton );
-        zoomButton.setOnClickListener( new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mMainView.zoom(2);
-            }
-        } );
-
-        Button zoomOutButton = findViewById( R.id.zoomOutButton );
-        zoomOutButton.setOnClickListener( new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mMainView.zoom(0.5f);
-            }
-        } );
 
         Button fileButton =findViewById(R.id.file_button);
         fileButton.setOnClickListener( new View.OnClickListener() {
@@ -107,6 +86,9 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case 3:
                         //exportPrompt(); //TODO add export functionality
+                        break;
+                    case 4:
+                        deleteFile();
                         break;
                     default:
                         break;
@@ -146,6 +128,7 @@ public class MainActivity extends AppCompatActivity {
                     //reset the working area
                     mMainView.setSavePending(false);
                     mMainView.resetSpace();
+                    mCurrentFile = null;
                 }
             });
             resetAreaDialog.show();
@@ -193,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public void checkAndSaveJson(final JSONObject obj, final File destFile) {
         try {
-//            currentFile = destFile;
+            mCurrentFile = destFile;
             if (!destFile.exists())
                 JsonHelper.writeFile(obj, destFile, this);
             else //the file already exists, warn the user that it will be overwritten
@@ -250,6 +233,26 @@ public class MainActivity extends AppCompatActivity {
             });
             saveFileBuilder.show();
         }
+    }
+
+    /**
+     * Lists available items by calling listItems if there are no changes pending
+     */
+    public void deleteFile() {
+        mMainView.resetSpace(); //clear the view
+        if(mCurrentFile!=null){
+            if (mCurrentFile.exists()) {
+                if (mCurrentFile.delete()) {
+                    Toast.makeText( this,"File Deleted",Toast.LENGTH_SHORT ).show();
+                    mCurrentFile = null;
+                } else {
+                    Toast.makeText( this,"File Not Deleted",Toast.LENGTH_SHORT ).show();
+                }
+            }
+        }
+
+
+
     }
 
     /**
@@ -338,6 +341,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void loadFromFile(File f) {
         JSONObject obj = JsonHelper.getJsonFromFile(f, this); //create a JSONObject from the File
+        mCurrentFile = f; //this is referenced later on in saveAs and deleteFile
 
         //currentFile = f; //this is referenced later on in saveAs
         try {

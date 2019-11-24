@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
 
@@ -18,20 +19,64 @@ public class Edge implements MindMapDrawable{
 
     //Saved in Json
     private String mId;
-    int mEdgeColor;
-    float mEdgeStrokeWidth;
+    private int mEdgeColorID;
+    private float mEdgeStrokeWidth;
     private Node mFromNode;
     private Node mToNode;
+    private String mTitle = "";
+    private String mDescription  = "";
     //Not Saved in Json
     private static final int DEFAULT_STROKE_WIDTH = 12,DEFAULT_EDGE_COLOR = Color.RED;
     private static final float DEFAULT_CURSOR_RADIUS = 30, DEFAULT_CURSOR_STROKE_WIDTH = 4f;
+    private static final int DEFAULT_TITLE_COLOR = Color.BLUE;
     private Path mPath,mStartCursorPath,mEndCursorPath;
-    private Paint mPaint,mCursorPaint;
+    private Paint mPaint,mCursorPaint,mTitlePaint;
     //Edge state variables
     private boolean mEditable;
     private MainView mParentView;
     private float mCurrentScale = 1f;
     private float mStartX,mStartY,mEndX,mEndY;
+
+    @Override
+    public String getTitle(){
+        return mTitle;
+    }
+
+    @Override
+    public String getDescription(){
+        if(mDescription==null)
+            return "";
+        return mDescription;
+    }
+
+    @Override
+    public void setTitle(String title){
+        mTitle = title;
+//        Rect boundTitle = new Rect()
+//        mTitlePaint.getTextBounds(title, 0, title.length(), boundTitle);
+//        //Add ... if title size exceeds the length of edge
+//        float length = (float)Math.sqrt((mStartX-mEndX)*(mStartX-mEndX) + (mStartY-mEndY)*(mStartY-mEndY));
+//        if(length<boundTitle.width()) {
+//            mR = boundTitle.width() / 2;
+        }
+
+    @Override
+    public void setDescription(String description){
+        if(description==null)
+            mDescription = "";
+        else
+            mDescription = description;
+    }
+
+    @Override
+    public void setColorID(int colorID) {
+        this.mEdgeColorID = colorID;
+    }
+
+    @Override
+    public int getColorID() {
+        return mEdgeColorID;
+    }
 
     public DrawableType type(){
         return DrawableType.EDGE;
@@ -47,7 +92,7 @@ public class Edge implements MindMapDrawable{
     }
 
     //Called while decoding Json
-    Edge(Node fromNode,Node toNode,String Id,MainView parent){
+    Edge(Node fromNode,Node toNode,String Id,MainView parent,int colorID,String title,String description){
         float[] startXY = (fromNode).centre();
         float[] endXY = (toNode).centre();
         setStart(startXY[0],startXY[1]);
@@ -57,6 +102,9 @@ public class Edge implements MindMapDrawable{
         init( parent );
         editable(false);
         mId = Id;
+        setColorID( colorID );
+        setTitle( title );
+        setDescription( description);
     }
 
     public void setFromNode(Node fromNode){
@@ -90,19 +138,34 @@ public class Edge implements MindMapDrawable{
         mCursorPaint.setStrokeWidth( DEFAULT_CURSOR_STROKE_WIDTH );
         mStartCursorPath = new Path();
         mEndCursorPath = new Path();
-        mPaint.setColor(DEFAULT_EDGE_COLOR);
+        mEdgeColorID = DEFAULT_EDGE_COLOR;
+        mPaint.setColor( mEdgeColorID );
         mCurrentScale = mParentView.mScaleFactor;
         mEdgeStrokeWidth = (int)(DEFAULT_STROKE_WIDTH*mCurrentScale);
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
-        mCursorPaint.setColor(DEFAULT_EDGE_COLOR);
+        mCursorPaint.setColor( mEdgeColorID );
+        mTitlePaint= new Paint();
+        mTitlePaint.setColor( DEFAULT_TITLE_COLOR );
+        mTitlePaint.setTextSize(30);
+        mTitlePaint.setTextAlign(Paint.Align.CENTER);
     }
 
     public void draw(Canvas canvas) {
         mPath.reset();
         mPath.moveTo(mStartX, mStartY);
         mPath.quadTo(mStartX, mStartY, mEndX,mEndY);
+        mPaint.setColor( mEdgeColorID );
         canvas.drawPath( mPath,  mPaint);
 
+        //for maintaing orientation of the text.
+        if(mStartX>mEndX){
+            mPath.reset();
+            mPath.moveTo(mEndX, mEndY);
+            mPath.quadTo(mEndX, mEndY, mStartX,mStartY);
+        }
+        canvas.drawTextOnPath(mTitle,mPath,0,3*mEdgeStrokeWidth,mTitlePaint );
+
+        mCursorPaint.setColor( mEdgeColorID );
         if(mEditable) {
             mStartCursorPath.reset();
             mStartCursorPath.addCircle( mStartX, mStartY, DEFAULT_CURSOR_RADIUS, Path.Direction.CW );
@@ -137,7 +200,7 @@ public class Edge implements MindMapDrawable{
             return false;
         }
         float slope = (mEndY - mStartY)/(mEndX - mStartX);
-        if((slope*x - y + mStartY-slope*mStartX)/Math.sqrt(1+slope*slope)<=5*mEdgeStrokeWidth)
+        if(Math.abs((slope*x - y + mStartY-slope*mStartX)/Math.sqrt(1+slope*slope))<=5*mEdgeStrokeWidth)
             return true;
         return false;
     }
@@ -207,6 +270,9 @@ public class Edge implements MindMapDrawable{
             obj.put( JsonHelper.EdgeSchema.EDGE_END_NODE_KEY, this.mToNode.getId());
             obj.put( JsonHelper.EdgeSchema.EDGE_STROKE_WIDTH_KEY, this.mEdgeStrokeWidth);
             obj.put( JsonHelper.ITEM_ID_KEY, this.getId());
+            obj.put( JsonHelper.EdgeSchema.EDGE_TITLE_KEY, this.getTitle());
+            obj.put( JsonHelper.EdgeSchema.EDGE_DESCRIPTION_KEY, this.getDescription());
+            obj.put( JsonHelper.EdgeSchema.EDGE_COLOR_KEY, this.getColorID());
             return obj;
 
         } catch (Exception e) {
@@ -239,7 +305,8 @@ public class Edge implements MindMapDrawable{
 
             //return a new arrow if we found both the items
             return (startNode == null || endNode == null) ? null
-                    : new Edge(startNode, endNode,jsonObject.getString( JsonHelper.ITEM_ID_KEY),view);
+                    : new Edge(startNode, endNode,jsonObject.getString( JsonHelper.ITEM_ID_KEY),view,jsonObject.getInt( JsonHelper.EdgeSchema.EDGE_COLOR_KEY),
+                    jsonObject.getString( JsonHelper.EdgeSchema.EDGE_TITLE_KEY),jsonObject.getString( JsonHelper.EdgeSchema.EDGE_DESCRIPTION_KEY));
         } catch (Exception e) {
             Log.e(TAG, "fromJson: ", e);
             return null;

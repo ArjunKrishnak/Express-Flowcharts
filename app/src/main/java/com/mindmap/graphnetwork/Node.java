@@ -7,9 +7,6 @@ import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
-import android.widget.TextView;
-
-import androidx.annotation.NonNull;
 
 import org.json.JSONObject;
 
@@ -17,10 +14,10 @@ public class Node implements MindMapDrawable{
     private static final String TAG = "Node";
 
     //Saved in Json
-    int mNodeColor;
+    int mNodeColorID;
     private float mX,mY,mR;
     private String mId;
-    private String mTitle = "Node";
+    private String mTitle = "";
     private String mDescription  = "";
     //Not Saved in Json
     Paint mPaint;
@@ -33,17 +30,33 @@ public class Node implements MindMapDrawable{
     private MainView mParentView;
     private float mCurrentScale = 1f;
 
+    @Override
+    public void setColorID(int colorID) {
+        this.mNodeColorID = colorID;
+    }
 
+    @Override
+    public int getColorID() {
+        return this.mNodeColorID;
+    }
+
+    public float getR(){
+        return mR;
+    }
+
+    @Override
     public String getTitle(){
         return mTitle;
     }
 
+    @Override
     public String getDescription(){
         if(mDescription==null)
             return "";
         return mDescription;
     }
 
+    @Override
     public void setTitle(String title){
         mTitle = title;
         Rect boundTitle = new Rect();
@@ -53,6 +66,7 @@ public class Node implements MindMapDrawable{
             mR = boundTitle.width()/2;
     }
 
+    @Override
     public void setDescription(String description){
         if(description==null)
             mDescription = "";
@@ -70,10 +84,11 @@ public class Node implements MindMapDrawable{
         return DrawableType.NODE;
     }
 
-    public Node(float x,float y,float r,String id,MainView parent,String title,String description){
+    public Node(float x,float y,float r,String id,MainView parent,String title,String description,int colorID){
         this(x,y,parent,title,description);
         this.mId = id;
         this.mR = r;
+        setColorID(colorID);
     }
 
     public Node(float x,float y,MainView parentView,String title,String description){
@@ -86,8 +101,8 @@ public class Node implements MindMapDrawable{
         mPath = new Path();
         setParentView(parentView);
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mNodeColor = DEFAULT_NODE_COLOR;
-        mPaint.setColor(mNodeColor);
+        mNodeColorID = DEFAULT_NODE_COLOR;
+        mPaint.setColor( mNodeColorID );
         mCurrentScale = parentView.mScaleFactor;
         mR = mCurrentScale*DEFAULT_NODE_RADIUS;
         set(x,y);
@@ -116,6 +131,7 @@ public class Node implements MindMapDrawable{
     public void draw(Canvas canvas){
         mPath.reset();
         mPath.addCircle( mX, mY, mR, Path.Direction.CW );
+        mPaint.setColor(mNodeColorID);
         canvas.drawPath(mPath, mPaint);
         canvas.drawText(mTitle, mX, mY, mTitlePaint);
     }
@@ -172,6 +188,7 @@ public class Node implements MindMapDrawable{
             obj.put( JsonHelper.ITEM_ID_KEY, this.getId());
             obj.put( JsonHelper.NodeSchema.NODE_TITLE_KEY,this.mTitle);
             obj.put( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY,this.mDescription);
+            obj.put( JsonHelper.NodeSchema.NODE_COLOR_KEY,this.mNodeColorID );
             return obj;
 
         } catch (Exception e) {
@@ -194,7 +211,8 @@ public class Node implements MindMapDrawable{
                             (float)obj.getDouble( JsonHelper.NodeSchema.NODE_RADIUS_KEY),
                             obj.getString( JsonHelper.ITEM_ID_KEY),view,
                             obj.getString( JsonHelper.NodeSchema.NODE_TITLE_KEY),
-                            obj.getString( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY ));
+                            obj.getString( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY ),
+                            obj.getInt( JsonHelper.NodeSchema.NODE_COLOR_KEY ));
         } catch (Exception e) {
             Log.e(TAG, "fromJson: ", e);
             return null;
