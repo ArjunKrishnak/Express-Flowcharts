@@ -48,6 +48,7 @@ public final class JsonHelper {
         public static final String NODE_TITLE_KEY = "node_title";
         public static final String NODE_DESCRIPTION_KEY = "node_description";
         public static final String NODE_COLOR_KEY = "node_color";
+        public static final String NODE_SHAPE_KEY = "node_shape";
     }
 
     public class EdgeSchema{
@@ -58,6 +59,7 @@ public final class JsonHelper {
         public static final String EDGE_TITLE_KEY = "edge_title";
         public static final String EDGE_DESCRIPTION_KEY = "edge_description";
         public static final String EDGE_COLOR_KEY = "edge_color";
+        public static final String EDGE_ARROW_TYPE_KEY = "edge_arrow_type";
     }
 
     //TODO why was this private ctor in vdroid

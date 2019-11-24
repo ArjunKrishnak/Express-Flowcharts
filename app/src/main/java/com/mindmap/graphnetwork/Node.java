@@ -4,12 +4,14 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
 
 import org.json.JSONObject;
-
+enum NodeShape { CIRCLE, SQUARE };
 public class Node implements MindMapDrawable{
     private static final String TAG = "Node";
 
@@ -19,6 +21,7 @@ public class Node implements MindMapDrawable{
     private String mId;
     private String mTitle = "";
     private String mDescription  = "";
+    private NodeShape mShape = NodeShape.CIRCLE;
     //Not Saved in Json
     Paint mPaint;
     Path mPath;
@@ -29,6 +32,10 @@ public class Node implements MindMapDrawable{
     //Node state variables
     private MainView mParentView;
     private float mCurrentScale = 1f;
+
+    public void setShape(NodeShape shape) {
+        this.mShape = shape;
+    }
 
     @Override
     public void setColorID(int colorID) {
@@ -84,16 +91,17 @@ public class Node implements MindMapDrawable{
         return DrawableType.NODE;
     }
 
-    public Node(float x,float y,float r,String id,MainView parent,String title,String description,int colorID){
-        this(x,y,parent,title,description);
+    public Node(float x,float y,float r,String id,MainView parent,String title,String description,int colorID,NodeShape shape){
+        this(x,y,parent,title,description,shape);
         this.mId = id;
         this.mR = r;
         setColorID(colorID);
     }
 
-    public Node(float x,float y,MainView parentView,String title,String description){
+    public Node(float x,float y,MainView parentView,String title,String description,NodeShape shape){
         this(x,y,parentView,title);
         setDescription(description);
+        setShape(shape);
     }
 
     public Node(float x,float y,MainView parentView,String title) {
@@ -120,17 +128,38 @@ public class Node implements MindMapDrawable{
         mPath.addCircle( mX, mY, mR, Path.Direction.CW );
     }
 
+    public float distance(PointF p1,PointF p2){
+        return Math.abs( (float)Math.sqrt( (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y) ) );
+    }
+
     @Override
     public boolean contains(float x, float y) {
-        if((x-mX)*(x-mX) + (y-mY)*(y-mY) <= mR*mR)
-            return true;
+        if(mShape==NodeShape.CIRCLE) {
+            if ((x - mX) * (x - mX) + (y - mY) * (y - mY) <= mR * mR)
+                return true;
+        }
+        else if(mShape==NodeShape.SQUARE){
+
+            PointF currP = new PointF(x,y);
+            PointF p1 = new PointF(mX-mR,mY-mR);
+            PointF p2 = new PointF(mX-mR,mY+mR);
+            PointF p3 = new PointF(mX+mR,mY-mR);
+            PointF p4 = new PointF(mX+mR,mY+mR);
+
+            if( distance(p1,currP) < 2*mR && distance(p2,currP) < 2*mR &&
+                distance(p3,currP) < 2*mR && distance(p4,currP) < 2*mR )
+                return true;
+        }
         return false;
     }
 
     @Override
     public void draw(Canvas canvas){
         mPath.reset();
-        mPath.addCircle( mX, mY, mR, Path.Direction.CW );
+        if(mShape == NodeShape.CIRCLE)
+            mPath.addCircle( mX, mY, mR, Path.Direction.CW );
+        else if(mShape == NodeShape.SQUARE)
+            mPath.addRect( mX-mR, mY-mR, mX+mR,mY+mR, Path.Direction.CW );
         mPaint.setColor(mNodeColorID);
         canvas.drawPath(mPath, mPaint);
         canvas.drawText(mTitle, mX, mY, mTitlePaint);
@@ -189,12 +218,19 @@ public class Node implements MindMapDrawable{
             obj.put( JsonHelper.NodeSchema.NODE_TITLE_KEY,this.mTitle);
             obj.put( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY,this.mDescription);
             obj.put( JsonHelper.NodeSchema.NODE_COLOR_KEY,this.mNodeColorID );
+            obj.put( JsonHelper.NodeSchema.NODE_SHAPE_KEY,this.mShape.toString() );
             return obj;
 
         } catch (Exception e) {
             Log.e(TAG, "toJson: ", e);
             return null;
         }
+    }
+
+    private static NodeShape shapeStringToEnum(String string){
+        if(string.equals(NodeShape.CIRCLE.toString()))
+            return NodeShape.CIRCLE;
+        return NodeShape.SQUARE;
     }
 
     /**
@@ -212,7 +248,8 @@ public class Node implements MindMapDrawable{
                             obj.getString( JsonHelper.ITEM_ID_KEY),view,
                             obj.getString( JsonHelper.NodeSchema.NODE_TITLE_KEY),
                             obj.getString( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY ),
-                            obj.getInt( JsonHelper.NodeSchema.NODE_COLOR_KEY ));
+                            obj.getInt( JsonHelper.NodeSchema.NODE_COLOR_KEY ),
+                            shapeStringToEnum(obj.getString( JsonHelper.NodeSchema.NODE_SHAPE_KEY)));
         } catch (Exception e) {
             Log.e(TAG, "fromJson: ", e);
             return null;

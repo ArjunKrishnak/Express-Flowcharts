@@ -53,6 +53,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     private boolean savePending = false; //used for saving file
     boolean mClickedNodeSelected = false;
     private int mColorId;//selected color from details_window
+    private NodeShape mShape;//selected shape from details_window
 
     //Saved in Json
     private ArrayList<MindMapDrawable> mAllViewDrawables;
@@ -227,10 +228,10 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         postInvalidate();
     }
 
-    public void addNode(float x,float y,String title,String description){
+    public void addNode(float x,float y,String title,String description,NodeShape shape){
 //        Node node = new Node(mContext);
 //        node.initNode(x,y,this);
-        Node node = new Node(x,y,this,title, description);
+        Node node = new Node(x,y,this,title, description,shape);
         node.set( x,y-node.getR() );//To make it display above the new node button
         node.setColorID(mColorId);
         addDrawable(node);
@@ -431,7 +432,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             @Override
             public void onClick(View view) {
                 if(mLongClicked==null)
-                    addNode(mDownX,mDownY,nameEditText.getText().toString(),descriptionEditText.getText().toString());
+                    addNode(mDownX,mDownY,nameEditText.getText().toString(),descriptionEditText.getText().toString(),mShape);
                 else{
                     (mLongClicked).setTitle( nameEditText.getText().toString() );
                     (mLongClicked).setDescription( descriptionEditText.getText().toString() );
@@ -547,6 +548,91 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             public void onClick(View view) {
                 mColorId = ((ColorDrawable) view.getBackground()).getColor();
             } });
+
+        //Shape layout
+        final LinearLayout shapeLinearLayout = detailsLayout.findViewById( R.id.shape_linear_layout );
+
+        if(mLongClicked instanceof Edge) {
+            final Button leftArrowOnlyButton = new Button( mContext );
+            leftArrowOnlyButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
+            leftArrowOnlyButton.setText( "left" );
+            leftArrowOnlyButton.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (mDownX > ((Edge) mLongClicked).getStartXY().x)
+                        ((Edge) mLongClicked).setArrowShape( ArrowShape.START );
+                    else
+                        ((Edge) mLongClicked).setArrowShape( ArrowShape.END );
+                }
+            } );
+            shapeLinearLayout.addView( leftArrowOnlyButton );
+
+            final Button rightArrowOnlyButton = new Button( mContext );
+            rightArrowOnlyButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
+            rightArrowOnlyButton.setText( "right" );
+            rightArrowOnlyButton.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (mDownX < ((Edge) mLongClicked).getStartXY().x)
+                        ((Edge) mLongClicked).setArrowShape( ArrowShape.START );
+                    else
+                        ((Edge) mLongClicked).setArrowShape( ArrowShape.END );
+                }
+            } );
+            shapeLinearLayout.addView( rightArrowOnlyButton );
+
+            final Button doubleArrowButton = new Button( mContext );
+            doubleArrowButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
+            doubleArrowButton.setText( "double" );
+            doubleArrowButton.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    ((Edge) mLongClicked).setArrowShape( ArrowShape.DOUBLE );
+                }
+            } );
+            shapeLinearLayout.addView( doubleArrowButton );
+
+            final Button noArrowButton = new Button( mContext );
+            noArrowButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
+            noArrowButton.setText( "none" );
+            noArrowButton.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    ((Edge) mLongClicked).setArrowShape( ArrowShape.NONE );
+                }
+            } );
+            shapeLinearLayout.addView( noArrowButton );
+        }
+        else{
+            final Button circleShapeButton = new Button( mContext );
+            circleShapeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
+            circleShapeButton.setText( "circle" );
+            circleShapeButton.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if(mLongClicked == null)
+                        mShape = NodeShape.CIRCLE;
+                    else
+                        ((Node)mLongClicked).setShape(NodeShape.CIRCLE);
+                }
+            } );
+            shapeLinearLayout.addView( circleShapeButton );
+
+            final Button squareShapeButton = new Button( mContext );
+            squareShapeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
+            squareShapeButton.setText( "square" );
+            squareShapeButton.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if(mLongClicked == null)
+                        mShape = NodeShape.SQUARE;
+                    else
+                        ((Node)mLongClicked).setShape(NodeShape.SQUARE);
+                }
+            } );
+            shapeLinearLayout.addView( squareShapeButton );
+        }
+
         detailsAlertDialog.show();
     }
 
