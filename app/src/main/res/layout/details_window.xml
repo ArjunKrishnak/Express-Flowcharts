@@ -21,14 +21,14 @@
 
         </TextView>
 
-        <Button
+        <ImageButton
             android:id="@+id/close_button"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="2"
-            android:text="CLOSE">
+            android:src="@drawable/close" >
 
-        </Button>
+        </ImageButton>
     </LinearLayout>
 
     <EditText
@@ -221,11 +221,12 @@
         android:layout_weight="1"
         android:orientation="horizontal"
         android:id="@+id/button_linear_layout">
-        <Button
+        <ImageButton
             android:id="@+id/set_button"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:src="@drawable/tick"
             android:layout_weight="1"
-            android:text="SET" />
+             />
     </LinearLayout>
 </LinearLayout>

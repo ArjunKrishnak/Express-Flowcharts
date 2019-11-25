@@ -2,7 +2,9 @@ package com.mindmap.graphnetwork;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
@@ -12,8 +14,8 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -52,8 +54,8 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     private float mDownX,mDownY; //press down X,Y
     private boolean savePending = false; //used for saving file
     boolean mClickedNodeSelected = false;
-    private int mColorId;//selected color from details_window
-    private NodeShape mShape;//selected shape from details_window
+    private int mColorId = Color.BLUE;//selected color from details_window
+    private NodeShape mShape = NodeShape.CIRCLE;//selected shape from details_window
 
     //Saved in Json
     private ArrayList<MindMapDrawable> mAllViewDrawables;
@@ -261,7 +263,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 float moveX = event.getX();
                 float moveY = event.getY();
 
-                if(mViewTask == ViewTask.PAN_SCREEN){//TODO Stat moving only after we cross a threshold for detecting gesture? why is dragging so sluggish?
+                if(mViewTask == ViewTask.PAN_SCREEN){
                     mShiftX = moveX-mSwipeDownX;
                     mShiftY = moveY-mSwipeDownY;
                     mSwipeDownX = moveX;
@@ -409,7 +411,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         detailsAlertBuilder.setView(detailsLayout);
         final AlertDialog detailsAlertDialog = detailsAlertBuilder.create();
 
-        //if we're editing a drawable, populate the dialog with the current contents //TODO color part
+        //if we're editing a drawable, populate the dialog with the current contents
         final TextView TitleTextView = detailsLayout.findViewById(R.id.title_text_view);
         if (mLongClicked==null)
             TitleTextView.setText( R.string.new_node );
@@ -426,7 +428,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         final EditText descriptionEditText = detailsLayout.findViewById(R.id.description_edit_text );
         if (mLongClicked!=null)
             descriptionEditText.setText((mLongClicked).getDescription());
-        final Button setButton = detailsLayout.findViewById(R.id.set_button );
+        final ImageButton setButton = detailsLayout.findViewById(R.id.set_button );
 
         setButton.setOnClickListener( new View.OnClickListener() {
             @Override
@@ -438,23 +440,19 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     (mLongClicked).setDescription( descriptionEditText.getText().toString() );
                     (mLongClicked).setColorID(mColorId);
                 }
-                mLongClicked = null;
-                mViewTask = ViewTask.IDLE;
                 detailsAlertDialog.dismiss();
                 postInvalidate();
             }
         });
 
         if(mLongClicked!=null) { //only add delete button if we are editing
-            final Button deleteNodeButton = new Button( mContext );
+            final ImageButton deleteNodeButton = new ImageButton( mContext );
             deleteNodeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
-            deleteNodeButton.setText( R.string.delete_button );
+            deleteNodeButton.setImageDrawable(getResources().getDrawable(R.drawable.delete));
             deleteNodeButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     deleteItem( mLongClicked );
-                    mLongClicked = null;
-                    mViewTask = ViewTask.IDLE;
                     detailsAlertDialog.dismiss();
                 }
             } );
@@ -463,12 +461,10 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             buttonLinearLayout.addView( deleteNodeButton );
         }
 
-        final Button closeButton = detailsLayout.findViewById(R.id.close_button );
+        final ImageButton closeButton = detailsLayout.findViewById(R.id.close_button );
         closeButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mLongClicked = null;
-                mViewTask = ViewTask.IDLE;
                 detailsAlertDialog.dismiss();
             }
         });
@@ -553,9 +549,9 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         final LinearLayout shapeLinearLayout = detailsLayout.findViewById( R.id.shape_linear_layout );
 
         if(mLongClicked instanceof Edge) {
-            final Button leftArrowOnlyButton = new Button( mContext );
+            final ImageButton leftArrowOnlyButton = new ImageButton( mContext );
             leftArrowOnlyButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
-            leftArrowOnlyButton.setText( "left" );
+            leftArrowOnlyButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.left_arrow ));
             leftArrowOnlyButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -567,9 +563,9 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             } );
             shapeLinearLayout.addView( leftArrowOnlyButton );
 
-            final Button rightArrowOnlyButton = new Button( mContext );
+            final ImageButton rightArrowOnlyButton = new ImageButton( mContext );
             rightArrowOnlyButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
-            rightArrowOnlyButton.setText( "right" );
+            rightArrowOnlyButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.right_arrow));
             rightArrowOnlyButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -581,9 +577,9 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             } );
             shapeLinearLayout.addView( rightArrowOnlyButton );
 
-            final Button doubleArrowButton = new Button( mContext );
+            final ImageButton doubleArrowButton = new ImageButton( mContext );
             doubleArrowButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
-            doubleArrowButton.setText( "double" );
+            doubleArrowButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.double_headed_arrow));
             doubleArrowButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -592,9 +588,9 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             } );
             shapeLinearLayout.addView( doubleArrowButton );
 
-            final Button noArrowButton = new Button( mContext );
+            final ImageButton noArrowButton = new ImageButton( mContext );
             noArrowButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
-            noArrowButton.setText( "none" );
+            noArrowButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.none_arrow));
             noArrowButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -604,9 +600,9 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             shapeLinearLayout.addView( noArrowButton );
         }
         else{
-            final Button circleShapeButton = new Button( mContext );
+            final ImageButton circleShapeButton = new ImageButton( mContext );
             circleShapeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
-            circleShapeButton.setText( "circle" );
+            circleShapeButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.circle));
             circleShapeButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -618,9 +614,9 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             } );
             shapeLinearLayout.addView( circleShapeButton );
 
-            final Button squareShapeButton = new Button( mContext );
+            final ImageButton squareShapeButton = new ImageButton( mContext );
             squareShapeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
-            squareShapeButton.setText( "square" );
+            squareShapeButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.square ));
             squareShapeButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -634,6 +630,13 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         }
 
         detailsAlertDialog.show();
+        detailsAlertDialog.setOnDismissListener(new DialogInterface.OnDismissListener(){
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                mLongClicked = null;
+                mViewTask = ViewTask.IDLE;
+            }
+        } );
     }
 
 

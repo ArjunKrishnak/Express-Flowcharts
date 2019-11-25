@@ -15,7 +15,7 @@ import java.util.List;
 enum ArrowShape { START,END,DOUBLE,NONE };
 
 public class Edge implements MindMapDrawable{
-
+//TODO correct the positioning of arrows
     private static final String TAG = "Edge";
 
     //Saved in Json
@@ -32,7 +32,7 @@ public class Edge implements MindMapDrawable{
     private static final float DEFAULT_CURSOR_RADIUS = 30, DEFAULT_CURSOR_STROKE_WIDTH = 4f;
     private static final int DEFAULT_TITLE_COLOR = Color.BLUE;
     private Path mPath,mStartCursorPath,mEndCursorPath;
-    private Paint mPaint,mCursorPaint,mTitlePaint;
+    private Paint mPaint,mCursorPaint,mTitlePaint, mArrowHeadFillPaint;
     //Edge state variables
     private boolean mEditable;
     private MainView mParentView;
@@ -163,12 +163,25 @@ public class Edge implements MindMapDrawable{
         mTitlePaint.setColor( DEFAULT_TITLE_COLOR );
         mTitlePaint.setTextSize(30);
         mTitlePaint.setTextAlign(Paint.Align.CENTER);
+        mArrowHeadFillPaint = new Paint();
+        mArrowHeadFillPaint.setStyle(Paint.Style.FILL);
+        mArrowHeadFillPaint.setColor(mEdgeColorID);
     }
 
     public void draw(Canvas canvas) {
         mPath.reset();
-        mPath.moveTo(mStartX, mStartY);
-        mPath.quadTo(mStartX, mStartY, mEndX,mEndY);
+
+//        PointF start = new PointF(mStartX,mStartY); //TODO complete logic
+//        PointF end = new PointF(mEndX,mEndY);
+//
+//        if(!mEditable) {
+//            if (mStartX < mEndX) {
+//                start.x = mStartX - mFromNode.getR();
+//                start.y = mStartX - mFromNode.getR();
+//            }
+//        }
+        mPath.moveTo( mStartX, mStartY );
+        mPath.quadTo( mStartX, mStartY, mEndX, mEndY );
         mPaint.setColor( mEdgeColorID );
         canvas.drawPath( mPath,  mPaint);
 
@@ -405,10 +418,7 @@ public class Edge implements MindMapDrawable{
         outlinePath.lineTo(x2, y2);
         outlinePath.close();
 
-        Paint defaultArrowHeadFillPaint = new Paint();
-        defaultArrowHeadFillPaint.setStyle(Paint.Style.FILL);
-        defaultArrowHeadFillPaint.setColor(Color.BLACK);
-        canvas.drawPath(outlinePath, defaultArrowHeadFillPaint);
+        canvas.drawPath(outlinePath, mArrowHeadFillPaint );
     }
 
 
