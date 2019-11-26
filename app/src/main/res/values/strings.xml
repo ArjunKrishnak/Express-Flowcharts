@@ -2,7 +2,7 @@
     <string name="app_name">GraphNetwork</string>
 
     <!--File Options-->
-    <string name="file">File</string>
+    <string name="file">Options</string>
     <string-array name="file_options">
         <item>New</item>
         <item>Load</item>

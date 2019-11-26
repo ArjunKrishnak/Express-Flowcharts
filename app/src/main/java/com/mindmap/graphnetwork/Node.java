@@ -8,6 +8,7 @@ import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
+import android.widget.Toast;
 
 import org.json.JSONObject;
 enum NodeShape { CIRCLE, SQUARE };
@@ -109,11 +110,13 @@ public class Node implements MindMapDrawable{
         return DrawableType.NODE;
     }
 
-    public Node(float x,float y,float r,String id,MainView parent,String title,String description,int colorID,NodeShape shape){
+    //called by from Json
+    public Node(float x,float y,float r,String id,MainView parent,String title,String description,int colorID,NodeShape shape,float textSize){
         this(x,y,parent,title,description,shape);
         this.mId = id;
         this.mR = r;
         setColorID(colorID);
+        mTextSize = textSize;
     }
 
     public Node(float x,float y,MainView parentView,String title,String description,NodeShape shape){
@@ -181,8 +184,19 @@ public class Node implements MindMapDrawable{
             mPath.addRect( mX-mR, mY-mR, mX+mR,mY+mR, Path.Direction.CW );
         mPaint.setColor(mNodeColorID);
         canvas.drawPath(mPath, mPaint);
+
+        //change text color to white for dark colors
+        if(mNodeColorID == Color.BLACK || mNodeColorID == Color.RED || mNodeColorID ==Color.BLUE
+        || mNodeColorID == -65409 || mNodeColorID == -65281 || mNodeColorID == -8453889){
+            mTitlePaint.setColor(Color.WHITE);
+        }
+        else{
+            mTitlePaint.setColor(Color.BLACK);
+        }
         canvas.drawText( reduceText(mTitle), mX, mY, mTitlePaint);
     }
+
+    //TODO Self connecting, Lock orientation, help 
 
     @Override
     public void scale(float scale){
@@ -190,6 +204,7 @@ public class Node implements MindMapDrawable{
         mX = mX*scaleFactor;
         mY = mY*scaleFactor;
         mR = mR*scaleFactor;
+        mTextSize = mTextSize*scaleFactor;
         mCurrentScale = scale;
     }
 
@@ -229,7 +244,7 @@ public class Node implements MindMapDrawable{
     public JSONObject toJson() {
         try {
             JSONObject obj = new JSONObject();
-            obj.put( JsonHelper.ITEM_TYPE_KEY, getClass().getName()); // TODO change this to enum
+            obj.put( JsonHelper.ITEM_TYPE_KEY, getClass().getName());
             obj.put( JsonHelper.NodeSchema.NODE_CENTRE_X_KEY, this.mX);
             obj.put( JsonHelper.NodeSchema.NODE_CENTRE_Y_KEY, this.mY);
             obj.put( JsonHelper.NodeSchema.NODE_RADIUS_KEY, this.mR);
@@ -238,6 +253,7 @@ public class Node implements MindMapDrawable{
             obj.put( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY,this.mDescription);
             obj.put( JsonHelper.NodeSchema.NODE_COLOR_KEY,this.mNodeColorID );
             obj.put( JsonHelper.NodeSchema.NODE_SHAPE_KEY,this.mShape.toString() );
+            obj.put( JsonHelper.NodeSchema.NODE_TEXT_SIZE_KEY,this.mTextSize);
             return obj;
 
         } catch (Exception e) {
@@ -268,7 +284,8 @@ public class Node implements MindMapDrawable{
                             obj.getString( JsonHelper.NodeSchema.NODE_TITLE_KEY),
                             obj.getString( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY ),
                             obj.getInt( JsonHelper.NodeSchema.NODE_COLOR_KEY ),
-                            shapeStringToEnum(obj.getString( JsonHelper.NodeSchema.NODE_SHAPE_KEY)));
+                            shapeStringToEnum(obj.getString( JsonHelper.NodeSchema.NODE_SHAPE_KEY)),
+                            (float)obj.getDouble(JsonHelper.NodeSchema.NODE_TEXT_SIZE_KEY));
         } catch (Exception e) {
             Log.e(TAG, "fromJson: ", e);
             return null;

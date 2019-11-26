@@ -8,13 +8,10 @@ import android.content.DialogInterface;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.widget.ImageButton;
 import android.widget.PopupWindow;
-import android.widget.TableLayout;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -56,8 +53,8 @@ public class MainActivity extends AppCompatActivity {
         mMainView = findViewById(R.id.MainViewID);
         mFileHelper = new JsonHelper(this);
 
-        Button fileButton =findViewById(R.id.file_button);
-        fileButton.setOnClickListener( new View.OnClickListener() {
+        ImageButton optionsButton =findViewById(R.id.options_button );
+        optionsButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 fileDialog();
@@ -88,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
                         //exportPrompt(); //TODO add export functionality
                         break;
                     case 4:
-                        deleteFile();
+                        listItems(true);
                         break;
                     default:
                         break;
@@ -238,20 +235,16 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Lists available items by calling listItems if there are no changes pending
      */
-    public void deleteFile() {
-        mMainView.resetSpace(); //clear the view
-        if(mCurrentFile!=null){
-            if (mCurrentFile.exists()) {
-                if (mCurrentFile.delete()) {
+    public void deleteFile(File file) {
+        if(file!=null){
+            if (file.exists()) {
+                if (file.delete()) {
                     Toast.makeText( this,"File Deleted",Toast.LENGTH_SHORT ).show();
-                    mCurrentFile = null;
                 } else {
                     Toast.makeText( this,"File Not Deleted",Toast.LENGTH_SHORT ).show();
                 }
             }
         }
-
-
 
     }
 
@@ -266,7 +259,7 @@ public class MainActivity extends AppCompatActivity {
             changesPendingBuilder.setPositiveButton(R.string.yes_str, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    listItems(); //list the items, the pending changes will be lost
+                    listItems(false); //list the items, the pending changes will be lost
                 }
             });
             changesPendingBuilder.setNegativeButton(R.string.no_str, new DialogInterface.OnClickListener() {
@@ -277,13 +270,14 @@ public class MainActivity extends AppCompatActivity {
             });
             changesPendingBuilder.show();
         } else
-            listItems(); // we don't have changes pending, just list the items
+            listItems(false); // we don't have changes pending, just list the items
     }
 
     /**
      * List the available items and allows the user to pick one to load
+     * delete argument if true means list called by delete else called by load
      */
-    public void listItems() {
+    public void listItems(final boolean delete) {
         try {
             //get all the .map files from the directory
             final File MindMapFiles[] = mFileHelper.MIND_MAP_FOLDER.listFiles(new FilenameFilter() {
@@ -303,7 +297,12 @@ public class MainActivity extends AppCompatActivity {
                 listBuilder.setItems(fileNames, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        loadFromFile(MindMapFiles[which]); //when one is selected, fileLoad it
+                        if(delete){
+                            deleteFile(MindMapFiles[which]);
+                        }
+                        else {
+                            loadFromFile( MindMapFiles[which] ); //when one is selected, fileLoad it
+                        }
                     }
                 });
                 listBuilder.setNegativeButton(R.string.cancel_str, new DialogInterface.OnClickListener() {

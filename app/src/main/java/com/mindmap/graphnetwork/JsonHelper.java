@@ -49,6 +49,7 @@ public final class JsonHelper {
         public static final String NODE_DESCRIPTION_KEY = "node_description";
         public static final String NODE_COLOR_KEY = "node_color";
         public static final String NODE_SHAPE_KEY = "node_shape";
+        public static final String NODE_TEXT_SIZE_KEY = "node_text_size";
     }
 
     public class EdgeSchema{
@@ -60,9 +61,10 @@ public final class JsonHelper {
         public static final String EDGE_DESCRIPTION_KEY = "edge_description";
         public static final String EDGE_COLOR_KEY = "edge_color";
         public static final String EDGE_ARROW_TYPE_KEY = "edge_arrow_type";
+        public static final String EDGE_TEXT_SIZE_KEY = "edge_text_size";
+
     }
 
-    //TODO why was this private ctor in vdroid
     public JsonHelper(Context context) {
         MIND_MAP_FOLDER = new File(context.getExternalFilesDir(null).getAbsolutePath() + "/mindmap/");
         PICTURES_FOLDER = new File(context.getExternalFilesDir(null).getAbsolutePath() + "/pictures/");

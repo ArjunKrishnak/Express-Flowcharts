@@ -28,12 +28,12 @@
 
     </com.mindmap.graphnetwork.MainView>
 
-    <Button
-        android:id="@+id/file_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="FILE"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <ImageButton
+        android:id="@+id/options_button"
+        android:layout_width="63dp"
+        android:layout_height="54dp"
+        android:src="@drawable/options"
+        app:layout_constraintStart_toStartOf="@+id/MainViewID"
+        app:layout_constraintTop_toTopOf="@+id/MainViewID" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -108,7 +108,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         resetSpace(1.0f);
     }
     public void resetSpace(float scale) {
-        //TODO check if any resetting is missed.
         mAllViewDrawables.clear();
         mClicked = null;
         mLongClicked = null;
@@ -289,7 +288,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     mClickedNodeSelected = mClickedNodeSelected || mClicked.contains( mDownX, mDownY );
 
                 if(!mClickedNodeSelected) {
-                    Toast.makeText( mContext, "nothing to move", Toast.LENGTH_SHORT ).show();
                     return true;
                 }
 

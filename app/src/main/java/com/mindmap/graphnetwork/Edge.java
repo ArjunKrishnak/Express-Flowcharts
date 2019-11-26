@@ -110,7 +110,7 @@ public class Edge implements MindMapDrawable{
     }
 
     //Called while decoding Json
-    Edge(Node fromNode,Node toNode,String Id,MainView parent,int colorID,String title,String description,ArrowShape arrowShape){
+    Edge(Node fromNode,Node toNode,String Id,MainView parent,int colorID,String title,String description,ArrowShape arrowShape,float textSize){
         float[] startXY = (fromNode).centre();
         float[] endXY = (toNode).centre();
         setStart(startXY[0],startXY[1]);
@@ -124,6 +124,7 @@ public class Edge implements MindMapDrawable{
         setTitle( title );
         setDescription( description);
         setArrowShape(arrowShape);
+        mTextSize = textSize;
     }
 
     public void setFromNode(Node fromNode){
@@ -406,6 +407,7 @@ public class Edge implements MindMapDrawable{
         mEndY*=scaleFactor;
         mCurrentScale = scale;
         mEdgeStrokeWidth = mEdgeStrokeWidth*scaleFactor;
+        mTextSize = mTextSize*scaleFactor;
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
     }
 
@@ -432,6 +434,7 @@ public class Edge implements MindMapDrawable{
             obj.put( JsonHelper.EdgeSchema.EDGE_DESCRIPTION_KEY, this.getDescription());
             obj.put( JsonHelper.EdgeSchema.EDGE_COLOR_KEY, this.getColorID());
             obj.put( JsonHelper.EdgeSchema.EDGE_ARROW_TYPE_KEY, this.getArrowShape().toString());
+            obj.put( JsonHelper.EdgeSchema.EDGE_TEXT_SIZE_KEY,this.mTextSize);
             return obj;
 
         } catch (Exception e) {
@@ -477,7 +480,8 @@ public class Edge implements MindMapDrawable{
             return (startNode == null || endNode == null) ? null
                     : new Edge(startNode, endNode,jsonObject.getString( JsonHelper.ITEM_ID_KEY),view,jsonObject.getInt( JsonHelper.EdgeSchema.EDGE_COLOR_KEY),
                     jsonObject.getString( JsonHelper.EdgeSchema.EDGE_TITLE_KEY),jsonObject.getString( JsonHelper.EdgeSchema.EDGE_DESCRIPTION_KEY),
-                    shapeStringToEnum(jsonObject.getString( JsonHelper.EdgeSchema.EDGE_ARROW_TYPE_KEY )));
+                    shapeStringToEnum(jsonObject.getString( JsonHelper.EdgeSchema.EDGE_ARROW_TYPE_KEY )),
+                    (float)jsonObject.getDouble(JsonHelper.EdgeSchema.EDGE_TEXT_SIZE_KEY));
         } catch (Exception e) {
             Log.e(TAG, "fromJson: ", e);
             return null;
