@@ -21,19 +21,25 @@ public class Node implements MindMapDrawable{
     private String mTitle = "";
     private String mDescription  = "";
     private NodeShape mShape = NodeShape.CIRCLE;
+    private float mTextSize;
     //Not Saved in Json
     Paint mPaint;
     Path mPath;
     Paint mTitlePaint;
     private static final int DEFAULT_NODE_COLOR = Color.BLUE;
     public static final float DEFAULT_NODE_RADIUS = 100;//making it available for MainActivity for new node creation
-    private static final int DEFAULT_TITLE_COLOR = Color.RED;
+    private static final int DEFAULT_TITLE_COLOR = Color.BLACK;
+    private static final int DEFAULT_TEXT_SIZE = 30;
     //Node state variables
     private MainView mParentView;
     private float mCurrentScale = 1f;
 
     public void setShape(NodeShape shape) {
         this.mShape = shape;
+    }
+
+    public NodeShape getShape() {
+        return mShape;
     }
 
     @Override
@@ -62,14 +68,27 @@ public class Node implements MindMapDrawable{
         return mDescription;
     }
 
+    String reduceText(String title){
+        Rect boundTitle = new Rect();
+        int length = title.length();
+        mTitlePaint.getTextBounds(title, 0, length, boundTitle);
+
+        while(boundTitle.width()>2*mR) {
+            int factor =  (int)(boundTitle.width()/(2*mR));
+            if(factor>2)
+                length = (int)((2*length)/factor);
+            else
+                length = length-1;
+            mTitlePaint.getTextBounds( title, 0, length, boundTitle );
+        }
+        if(length==title.length())
+            return title;
+        return title.substring(0,length-3)+"...";
+    }
+
     @Override
     public void setTitle(String title){
         mTitle = title;
-        Rect boundTitle = new Rect();
-        mTitlePaint.getTextBounds(title, 0, title.length(), boundTitle);
-        //Expand the node as required by the title
-        if(2*mR<boundTitle.width())
-            mR = boundTitle.width()/2;
     }
 
     @Override
@@ -115,7 +134,8 @@ public class Node implements MindMapDrawable{
         set(x,y);
         mTitlePaint= new Paint();
         mTitlePaint.setColor( DEFAULT_TITLE_COLOR );
-        mTitlePaint.setTextSize(30);
+        mTextSize = DEFAULT_TEXT_SIZE*mCurrentScale;
+        mTitlePaint.setTextSize(mTextSize);
         mTitlePaint.setTextAlign(Paint.Align.CENTER);
         setTitle(title);
     }
@@ -161,7 +181,7 @@ public class Node implements MindMapDrawable{
             mPath.addRect( mX-mR, mY-mR, mX+mR,mY+mR, Path.Direction.CW );
         mPaint.setColor(mNodeColorID);
         canvas.drawPath(mPath, mPaint);
-        canvas.drawText(mTitle, mX, mY, mTitlePaint);
+        canvas.drawText( reduceText(mTitle), mX, mY, mTitlePaint);
     }
 
     @Override

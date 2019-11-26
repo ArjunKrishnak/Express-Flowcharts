@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
 
@@ -15,13 +16,14 @@ import java.util.List;
 enum ArrowShape { START,END,DOUBLE,NONE };
 
 public class Edge implements MindMapDrawable{
-//TODO correct the positioning of arrows
+
     private static final String TAG = "Edge";
 
     //Saved in Json
     private String mId;
     private int mEdgeColorID;
     private float mEdgeStrokeWidth;
+    private float mTextSize;
     private Node mFromNode;
     private Node mToNode;
     private String mTitle = "";
@@ -30,7 +32,9 @@ public class Edge implements MindMapDrawable{
     //Not Saved in Json
     private static final int DEFAULT_STROKE_WIDTH = 12,DEFAULT_EDGE_COLOR = Color.RED;
     private static final float DEFAULT_CURSOR_RADIUS = 30, DEFAULT_CURSOR_STROKE_WIDTH = 4f;
-    private static final int DEFAULT_TITLE_COLOR = Color.BLUE;
+    private static final int DEFAULT_TEXT_COLOR = Color.BLACK;
+    private static final int DEFAULT_TEXT_SIZE = 30;
+
     private Path mPath,mStartCursorPath,mEndCursorPath;
     private Paint mPaint,mCursorPaint,mTitlePaint, mArrowHeadFillPaint;
     //Edge state variables
@@ -160,57 +164,45 @@ public class Edge implements MindMapDrawable{
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
         mCursorPaint.setColor( mEdgeColorID );
         mTitlePaint= new Paint();
-        mTitlePaint.setColor( DEFAULT_TITLE_COLOR );
-        mTitlePaint.setTextSize(30);
+        mTitlePaint.setColor( DEFAULT_TEXT_COLOR );
+
+        mTextSize = (DEFAULT_TEXT_SIZE*mCurrentScale);
+        mTitlePaint.setTextSize(mTextSize);
         mTitlePaint.setTextAlign(Paint.Align.CENTER);
         mArrowHeadFillPaint = new Paint();
         mArrowHeadFillPaint.setStyle(Paint.Style.FILL);
         mArrowHeadFillPaint.setColor(mEdgeColorID);
     }
 
+    String reduceText(String title){
+        if(title.equals(""))
+            return "";
+        Rect boundTitle = new Rect();
+        int length = title.length();
+        float pathLength = calculateDistance(new PointF(mStartX,mStartY),new PointF( mEndX,mEndY ));
+        mTitlePaint.getTextBounds(title, 0, length, boundTitle);
+        int x = boundTitle.width();
+        int y = boundTitle.height();
+
+        while(boundTitle.width()>pathLength/2) {
+            int factor =  (int)(boundTitle.width()/(pathLength));
+            if(factor>2)
+                length = (2*length)/factor;
+            else
+                length = length-1;
+            mTitlePaint.getTextBounds( title, 0, length, boundTitle );
+        }
+        if(length==title.length())
+            return title;
+        return title.substring(0,length-3)+"...";
+    }
+
     public void draw(Canvas canvas) {
         mPath.reset();
 
-//        PointF start = new PointF(mStartX,mStartY); //TODO complete logic
-//        PointF end = new PointF(mEndX,mEndY);
-//
-//        if(!mEditable) {
-//            if (mStartX < mEndX) {
-//                start.x = mStartX - mFromNode.getR();
-//                start.y = mStartX - mFromNode.getR();
-//            }
-//        }
-        mPath.moveTo( mStartX, mStartY );
-        mPath.quadTo( mStartX, mStartY, mEndX, mEndY );
-        mPaint.setColor( mEdgeColorID );
-        canvas.drawPath( mPath,  mPaint);
-
-        //for maintaing orientation of the text.
-        if(mStartX>mEndX){
-            mPath.reset();
-            mPath.moveTo(mEndX, mEndY);
-            mPath.quadTo(mEndX, mEndY, mStartX,mStartY);
-        }
-        canvas.drawTextOnPath(mTitle,mPath,0,3*mEdgeStrokeWidth,mTitlePaint );
-
-        mCursorPaint.setColor( mEdgeColorID );
-        if(mEditable) {
-            mStartCursorPath.reset();
-            mStartCursorPath.addCircle( mStartX, mStartY, DEFAULT_CURSOR_RADIUS, Path.Direction.CW );
-            canvas.drawPath( mStartCursorPath, mCursorPaint );
-
-            mEndCursorPath.reset();
-            mEndCursorPath.addCircle( mEndX, mEndY, DEFAULT_CURSOR_RADIUS, Path.Direction.CW );
-            canvas.drawPath( mEndCursorPath, mCursorPaint );
-        }
-
-        //drawing arrows
-        if(mArrowShape == ArrowShape.NONE)
-            return;
-
+        //get end and start direction points to calculate start and end angle
         PointF startDirectionPoint = new PointF(0,0);
         PointF endDirectionPoint = new PointF(0,0);
-
         if(mStartX==mEndX) {
             startDirectionPoint.x = mStartX;
             endDirectionPoint.x = mEndX;
@@ -237,12 +229,110 @@ public class Edge implements MindMapDrawable{
                 endDirectionPoint.y = mEndY - slope*10;
             }
         }
+        
+        //calculate start and end angles
+        float startAngle = calculateAngle(new PointF(mStartX,mStartY),startDirectionPoint);
+        float endAngle = calculateAngle(new PointF(mEndX,mEndY),endDirectionPoint);
+        
+        //calculate line arrow start and end points
+        PointF start = new PointF(mStartX,mStartY);
+        PointF end = new PointF(mEndX,mEndY);
+        if(!mEditable) {
+            calculateStartEndPointsInBoundary( start, end, startAngle, endAngle );
+            //drawing arrows and adjusting start and end points if necessary
+            mArrowHeadFillPaint.setColor( mEdgeColorID );
+            if (mArrowShape == ArrowShape.START || mArrowShape == ArrowShape.DOUBLE) {
+                drawArrowHead( canvas, start, startAngle );
+                start.x = start.x - (float) (4 * mEdgeStrokeWidth * Math.cos( startAngle ) * Math.cos( ARROW_ANGLE ));
+                start.y = start.y - (float) (4 * mEdgeStrokeWidth * Math.sin( startAngle ) * Math.cos( ARROW_ANGLE ));
+            }
+            if (mArrowShape == ArrowShape.END || mArrowShape == ArrowShape.DOUBLE) {
+                drawArrowHead( canvas, end, endAngle );
+                end.x = end.x - (float) (4 * mEdgeStrokeWidth * Math.cos( endAngle ) * Math.cos( ARROW_ANGLE ));
+                end.y = end.y - (float) (4 * mEdgeStrokeWidth * Math.sin( endAngle ) * Math.cos( ARROW_ANGLE ));
+            }
+        }
 
-        if(mArrowShape == ArrowShape.START|| mArrowShape == ArrowShape.DOUBLE)
-            drawArrowHead(canvas,new PointF(mStartX,mStartY),startDirectionPoint);
-        if(mArrowShape == ArrowShape.END|| mArrowShape == ArrowShape.DOUBLE)
-            drawArrowHead(canvas,new PointF(mEndX,mEndY),endDirectionPoint);
+        mPath.moveTo( start.x, start.y );
+        mPath.quadTo( start.x, start.y, end.x, end.y );
+        mPaint.setColor( mEdgeColorID );
+        canvas.drawPath( mPath,  mPaint);
 
+
+        mCursorPaint.setColor( mEdgeColorID );
+        if(mEditable) {
+            mStartCursorPath.reset();
+            mStartCursorPath.addCircle( mStartX, mStartY, DEFAULT_CURSOR_RADIUS, Path.Direction.CW );
+            canvas.drawPath( mStartCursorPath, mCursorPaint );
+
+            mEndCursorPath.reset();
+            mEndCursorPath.addCircle( mEndX, mEndY, DEFAULT_CURSOR_RADIUS, Path.Direction.CW );
+            canvas.drawPath( mEndCursorPath, mCursorPaint );
+            return;
+        }
+
+        //for maintaing orientation of the text flip the path if necessary.
+        if(mStartX>mEndX){
+            mPath.reset();
+            mPath.moveTo(end.x, end.y);
+            mPath.quadTo(end.x, end.y, start.x,start.y);
+        }
+        canvas.drawTextOnPath(reduceText(mTitle),mPath,0,3*mEdgeStrokeWidth,mTitlePaint );
+
+    }
+
+    private void calculateStartEndPointsInBoundary(PointF start, PointF end, float startAngle, float endAngle) {
+        float startR = mFromNode.getR();
+        if(mFromNode.getShape()==NodeShape.CIRCLE) {
+            start.x = mStartX - startR * ((float) Math.cos( startAngle ));
+            start.y = mStartY - startR * ((float) Math.sin( startAngle ));
+        }
+        else if(mFromNode.getShape()==NodeShape.SQUARE) {
+            float sin = (float) Math.sin( startAngle );
+            float cos = (float) Math.cos( startAngle );
+            if (cos < 0 && Math.abs( sin ) <= Math.abs( cos )) {
+                start.x = mStartX + startR;
+                start.y = mStartY + startR * sin / cos;
+            }
+            else if(cos>0 && Math.abs(sin)<=Math.abs(cos)){
+                start.x = mStartX - startR;
+                start.y = mStartY - startR*sin/cos;
+            }
+            else if(sin > 0 && Math.abs(sin)>Math.abs(cos)){
+                start.x = mStartX - startR*cos/sin;
+                start.y = mStartY - startR;
+            }
+            else if(sin < 0 && Math.abs(sin)>Math.abs(cos)){
+                start.x = mStartX + startR*cos/sin;
+                start.y = mStartY + startR;
+            }
+        }
+
+        float endR = mToNode.getR();
+        if(mToNode.getShape()==NodeShape.CIRCLE) {
+            end.x = mEndX - endR * ((float) Math.cos( endAngle ));
+            end.y = mEndY - endR * ((float) Math.sin( endAngle ));
+        }
+        else if(mToNode.getShape()==NodeShape.SQUARE) {
+            float sin = (float) Math.sin( endAngle );
+            float cos = (float) Math.cos( endAngle );
+            if (cos < 0 && Math.abs( sin ) <= Math.abs( cos )) {
+                end.x = mEndX + endR;
+                end.y = mEndY + endR * sin / cos;
+            }
+            else if(cos>0 && Math.abs(sin)<=Math.abs(cos)){
+                end.x = mEndX - endR;
+                end.y = mEndY - endR*sin/cos;
+            }
+            else if(sin > 0 && Math.abs(sin)>Math.abs(cos)){
+                end.x = mEndX - endR*cos/sin;
+                end.y = mEndY - endR;
+            }
+            else if(sin < 0 && Math.abs(sin)>Math.abs(cos)){
+                end.x = mEndX + endR*cos/sin;
+                end.y = mEndY + endR;
+            }
+        }
     }
 
     boolean fromNode(Node node){
@@ -397,13 +487,21 @@ public class Edge implements MindMapDrawable{
     //how far the user can click away from an arrow to select it
     private final double ARROW_ANGLE = Math.PI / 6d;
 
-    private void drawArrowHead(Canvas canvas, PointF location, PointF directionPoint) {
+    static private float calculateAngle(PointF location, PointF directionPoint){
 
         float dx = location.x - directionPoint.x;
         float dy = (location.y - directionPoint.y);
-        double angle = Math.atan2(dy, dx);
-        float arrLength = 4*mEdgeStrokeWidth;
+        return  (float) Math.atan2(dy, dx);
 
+    }
+
+    static private float calculateDistance(PointF p1, PointF p2) {
+        return (float)Math.sqrt((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y));
+    }
+
+    private void drawArrowHead(Canvas canvas, PointF location, float angle) {
+
+        float arrLength = 4*mEdgeStrokeWidth;
         /* logic inspired by Cay Horstmann's Violet */
         float x1 = (float) (location.x - arrLength * Math.cos(angle + ARROW_ANGLE));
         float y1 = (float) (location.y - arrLength * Math.sin(angle + ARROW_ANGLE));

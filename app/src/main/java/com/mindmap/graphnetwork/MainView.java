@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.ColorDrawable;
+import android.nfc.tech.Ndef;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -54,8 +55,18 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     private float mDownX,mDownY; //press down X,Y
     private boolean savePending = false; //used for saving file
     boolean mClickedNodeSelected = false;
-    private int mColorId = Color.BLUE;//selected color from details_window
-    private NodeShape mShape = NodeShape.CIRCLE;//selected shape from details_window
+
+    //currently seleced preferences from details window
+    private int mColorId = Color.BLUE; //selected color from details_window for either edge or node
+    private NodeShape mNodeShape = NodeShape.CIRCLE;
+    private ArrowShape mArrowShape = ArrowShape.NONE;
+
+    //remembering last seleced preferences from details window
+    private NodeShape lastSelectedNodeShape = NodeShape.CIRCLE;
+    private int lastSelectedNodeColor = Color.BLUE;
+    private int lastSelectedEdgeColor = Color.BLACK;
+    private ArrowShape lastSelectedArrowShape = ArrowShape.NONE;
+
 
     //Saved in Json
     private ArrayList<MindMapDrawable> mAllViewDrawables;
@@ -230,12 +241,12 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         postInvalidate();
     }
 
-    public void addNode(float x,float y,String title,String description,NodeShape shape){
+    public void addNode(float x,float y,String title,String description,NodeShape shape,int color){
 //        Node node = new Node(mContext);
 //        node.initNode(x,y,this);
         Node node = new Node(x,y,this,title, description,shape);
         node.set( x,y-node.getR() );//To make it display above the new node button
-        node.setColorID(mColorId);
+        node.setColorID(color);
         addDrawable(node);
     }
     @Override
@@ -355,6 +366,8 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                        float[] centreXY = ((Node)mClicked).centre();
                        mEdge = new Edge( centreXY[0], centreXY[1], centreXY[0], centreXY[1],this );
                        mEdge.setFromNode((Node)mClicked);
+                       mEdge.setArrowShape(lastSelectedArrowShape);
+                       mEdge.setColorID(lastSelectedEdgeColor);
                        mAllViewDrawables.add( mEdge );
                        mViewTask = ViewTask.MOVE_EDGE;
                        savePending = true;
@@ -411,7 +424,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         detailsAlertBuilder.setView(detailsLayout);
         final AlertDialog detailsAlertDialog = detailsAlertBuilder.create();
 
-        //if we're editing a drawable, populate the dialog with the current contents
         final TextView TitleTextView = detailsLayout.findViewById(R.id.title_text_view);
         if (mLongClicked==null)
             TitleTextView.setText( R.string.new_node );
@@ -422,23 +434,54 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 TitleTextView.setText( R.string.edit_edge );
         }
 
+        //if we're editing a drawable, populate the dialog with the current contents
         final EditText nameEditText = detailsLayout.findViewById(R.id.name_edit_text );
-        if (mLongClicked!=null)
-            nameEditText.setText(( mLongClicked).getTitle());
         final EditText descriptionEditText = detailsLayout.findViewById(R.id.description_edit_text );
-        if (mLongClicked!=null)
-            descriptionEditText.setText((mLongClicked).getDescription());
+
+        if (mLongClicked!=null) {
+            nameEditText.setText( (mLongClicked).getTitle() );
+            descriptionEditText.setText( (mLongClicked).getDescription() );
+            mColorId = mLongClicked.getColorID();
+            if(mLongClicked instanceof Node)
+                mNodeShape = ((Node)mLongClicked).getShape();
+            else if(mLongClicked instanceof Edge)
+                mArrowShape = ((Edge)mLongClicked).getArrowShape();
+        }
+
+
+        //Populate with recently used node preferences
+        if(mLongClicked == null){
+            mColorId = lastSelectedNodeColor;
+            mNodeShape = lastSelectedNodeShape;
+        }
+
         final ImageButton setButton = detailsLayout.findViewById(R.id.set_button );
 
         setButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(mLongClicked==null)
-                    addNode(mDownX,mDownY,nameEditText.getText().toString(),descriptionEditText.getText().toString(),mShape);
+
+                if(mLongClicked==null) {
+                    addNode( mDownX, mDownY, nameEditText.getText().toString(), descriptionEditText.getText().toString(), mNodeShape, mColorId );
+                    lastSelectedNodeColor = mColorId;
+                    lastSelectedNodeShape = mNodeShape;
+                }
                 else{
                     (mLongClicked).setTitle( nameEditText.getText().toString() );
                     (mLongClicked).setDescription( descriptionEditText.getText().toString() );
                     (mLongClicked).setColorID(mColorId);
+
+                    if(mLongClicked instanceof Node) {
+                        ((Node)mLongClicked).setShape(mNodeShape);
+                        lastSelectedNodeColor = mColorId;
+                        lastSelectedNodeShape = mNodeShape;
+                    }
+                    else {
+                        ((Edge) mLongClicked).setArrowShape(mArrowShape);
+                        lastSelectedEdgeColor = mColorId;
+                        lastSelectedArrowShape = mArrowShape;
+                    }
+
                 }
                 detailsAlertDialog.dismiss();
                 postInvalidate();
@@ -555,10 +598,12 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             leftArrowOnlyButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    if (mDownX > ((Edge) mLongClicked).getStartXY().x)
-                        ((Edge) mLongClicked).setArrowShape( ArrowShape.START );
-                    else
-                        ((Edge) mLongClicked).setArrowShape( ArrowShape.END );
+                    if (mDownX > ((Edge) mLongClicked).getStartXY().x) {
+                        mArrowShape = ArrowShape.START;
+                    }
+                    else {
+                        mArrowShape = ArrowShape.END;
+                    }
                 }
             } );
             shapeLinearLayout.addView( leftArrowOnlyButton );
@@ -570,9 +615,9 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 @Override
                 public void onClick(View view) {
                     if (mDownX < ((Edge) mLongClicked).getStartXY().x)
-                        ((Edge) mLongClicked).setArrowShape( ArrowShape.START );
+                        mArrowShape = ArrowShape.START;
                     else
-                        ((Edge) mLongClicked).setArrowShape( ArrowShape.END );
+                        mArrowShape = ArrowShape.END;
                 }
             } );
             shapeLinearLayout.addView( rightArrowOnlyButton );
@@ -583,7 +628,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             doubleArrowButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    ((Edge) mLongClicked).setArrowShape( ArrowShape.DOUBLE );
+                    mArrowShape = ArrowShape.DOUBLE;
                 }
             } );
             shapeLinearLayout.addView( doubleArrowButton );
@@ -594,7 +639,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             noArrowButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    ((Edge) mLongClicked).setArrowShape( ArrowShape.NONE );
+                    mArrowShape = ArrowShape.NONE;
                 }
             } );
             shapeLinearLayout.addView( noArrowButton );
@@ -606,10 +651,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             circleShapeButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    if(mLongClicked == null)
-                        mShape = NodeShape.CIRCLE;
-                    else
-                        ((Node)mLongClicked).setShape(NodeShape.CIRCLE);
+                    mNodeShape = NodeShape.CIRCLE;
                 }
             } );
             shapeLinearLayout.addView( circleShapeButton );
@@ -620,10 +662,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             squareShapeButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    if(mLongClicked == null)
-                        mShape = NodeShape.SQUARE;
-                    else
-                        ((Node)mLongClicked).setShape(NodeShape.SQUARE);
+                    mNodeShape = NodeShape.SQUARE;
                 }
             } );
             shapeLinearLayout.addView( squareShapeButton );
