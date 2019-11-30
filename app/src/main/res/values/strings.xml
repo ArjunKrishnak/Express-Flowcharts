@@ -1,19 +1,9 @@
 <resources>
     <string name="app_name">GraphNetwork</string>
 
-    <!--File Options-->
-    <string name="file">Options</string>
-    <string-array name="file_options">
-        <item>New</item>
-        <item>Load</item>
-        <item>Save</item>
-        <item>Export</item>
-        <item>Delete</item>
-    </string-array>
-
     <!--New Alert Dialog-->
-    <string name="new_class_diagram_dialog_title">New Class Diagram</string>
-    <string name="new_class_diagram_dialod_body">Reset the working area and make a new class diagram?</string>
+    <string name="new_class_diagram_dialog_title">New Diagram</string>
+    <string name="new_class_diagram_dialod_body">Reset the working area and make a new diagram?</string>
 
     <!--Saving Alert Dialog-->
     <string name="file_name_hint">Enter File Name</string>
@@ -51,6 +41,45 @@
     <string name="edit_node">Edit Node</string>
     <string name="edit_edge">Edit Edge</string>
     <string name="delete_button">Delete</string>
+
+    <!--Options Menu-->
+    <string name="menu_export">Export</string>
+    <string name="menu_save">Save</string>
+    <string name="menu_open">Open</string>
+    <string name="menu_new">New</string>
+    <string name="menu_delete">Delete</string>
+    <string name="menu_about">About</string>
+    <string name="menu_help">Help</string>
+
+    <!--Export Dialog-->
+    <string name="export">Export</string>
+    <string name="export_dialog_title">Export Image</string>
+    <string name="export_dialog_body">Enter a name for the image.</string>
+    <string name="export_success_toast">Image saved to your gallery.</string>
+
+    <!--about-->
+    <string name="about_text_created_by" >"Devoloped and designed by Arjun Krishna"</string>
+    <string name="about_text_rating" >"Please considering supporting by giving 5 stars :)"</string>
+
+    <!--help-->
+    <string name="bullet">\u2022</string>
+    <string name="zoom_help">"Pinch out with two fingers to zoom and pinch in to zoom out"</string>
+    <string name="pan_help">"Drag screen using two fingers to pan"</string>
+    <string name="add_node_help">"Long press in an empty space to create a node"</string>
+    <string name="move_node_help">"To move a node click on it and the drag it to the desired position"</string>
+    <string name="add_edge_help">"Double press a node to start creating a new edge from that node then drag the cursor of edge to the destination node to create the edge"</string>
+    <string name="details_window_help">"Long pressing any node or edge will give a pop up window to edit selected items properties or to delete it "</string>
+    <string name="options_help">"You can use the options menu to save the diagram or export it as an image"</string>
+
+    <!--permission alert-->
+    <string name="permission_necessary_title">permission_necessary</string>
+    <string name="permission_necessary_message">storage permission is necessary to export</string>
+    <string name="successfully_exported">File exported to galley.</string>
+    <string name="file_saved_in">File saved in :</string>
+    <string name="file_saved_successfully">File saved successfully</string>
+    <string name="nothing_to_export">Nothing to export.</string>
+    <string name="file_deleted">File Deleted.</string>
+    <string name="file_not_deleted">File not deleted.</string>
 
 
 </resources>

@@ -7,13 +7,10 @@ import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.util.Log;
-import android.widget.Toast;
 
 import org.json.JSONObject;
-enum NodeShape { CIRCLE, SQUARE };
+enum NodeShape { CIRCLE, SQUARE, DIAMOND };
 public class Node implements MindMapDrawable{
-    private static final String TAG = "Node";
 
     //Saved in Json
     int mNodeColorID;
@@ -55,6 +52,10 @@ public class Node implements MindMapDrawable{
 
     public float getR(){
         return mR;
+    }
+
+    public PointF getXY() {
+        return new PointF( mX,mY );
     }
 
     @Override
@@ -126,7 +127,7 @@ public class Node implements MindMapDrawable{
     }
 
     public Node(float x,float y,MainView parentView,String title) {
-        mId = JsonHelper.getUniqueID();
+        mId = FileHelper.getUniqueID();
         mPath = new Path();
         setParentView(parentView);
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -172,18 +173,45 @@ public class Node implements MindMapDrawable{
                 distance(p3,currP) < 2*mR && distance(p4,currP) < 2*mR )
                 return true;
         }
+        else if(mShape==NodeShape.DIAMOND){
+            PointF currP = new PointF(x,y);
+            PointF p1 = new PointF(mX-mR*(float)Math.sqrt(2),mY);
+            PointF p2 = new PointF(mX,mY-mR*(float)Math.sqrt(2));
+            PointF p3 = new PointF(mX+mR*(float)Math.sqrt(2),mY);
+            PointF p4 = new PointF(mX,mY+mR*(float)Math.sqrt(2));
+
+            if( distance(p1,currP) < 2*mR && distance(p2,currP) < 2*mR &&
+                    distance(p3,currP) < 2*mR && distance(p4,currP) < 2*mR )
+                return true;
+        }
         return false;
     }
+
+    @Override
+    public void draw(Canvas canvas,PointF reference){
+        mX = mX-reference.x;
+        mY = mY-reference.y;
+        draw( canvas );
+        mX = mX+reference.x;
+        mY = mY+reference.y;
+    }
+
 
     @Override
     public void draw(Canvas canvas){
         mPath.reset();
         if(mShape == NodeShape.CIRCLE)
             mPath.addCircle( mX, mY, mR, Path.Direction.CW );
-        else if(mShape == NodeShape.SQUARE)
+        else if(mShape == NodeShape.SQUARE || mShape == NodeShape.DIAMOND)
             mPath.addRect( mX-mR, mY-mR, mX+mR,mY+mR, Path.Direction.CW );
         mPaint.setColor(mNodeColorID);
+        if(mShape == NodeShape.DIAMOND) {
+            canvas.save();
+            canvas.rotate( 45,mX,mY );
+        }
         canvas.drawPath(mPath, mPaint);
+        if(mShape == NodeShape.DIAMOND)
+            canvas.restore();
 
         //change text color to white for dark colors
         if(mNodeColorID == Color.BLACK || mNodeColorID == Color.RED || mNodeColorID ==Color.BLUE
@@ -195,8 +223,6 @@ public class Node implements MindMapDrawable{
         }
         canvas.drawText( reduceText(mTitle), mX, mY, mTitlePaint);
     }
-
-    //TODO Self connecting, Lock orientation, help 
 
     @Override
     public void scale(float scale){
@@ -226,9 +252,14 @@ public class Node implements MindMapDrawable{
 
     @Override
     public boolean onScreen(float width, float height ) {
-        final RectF boundCircle  = new RectF(mX-mR,mY-mR,mX+mR,mY+mR);
+        final RectF boundShape;
+        if(mShape == NodeShape.CIRCLE || mShape == NodeShape.SQUARE)
+            boundShape  = new RectF(mX-mR,mY-mR,mX+mR,mY+mR);
+        else
+            boundShape = new RectF(mX -  mR*(float)Math.sqrt(2),mY - mR*(float)Math.sqrt(2),
+                                mX + mR*(float)Math.sqrt(2),mY + mR*(float)Math.sqrt(2));
         final RectF boundView = new RectF(0,0,width,height);
-        return boundCircle.intersect(boundView);
+        return boundShape.intersect(boundView);
     }
 
     @Override
@@ -244,20 +275,19 @@ public class Node implements MindMapDrawable{
     public JSONObject toJson() {
         try {
             JSONObject obj = new JSONObject();
-            obj.put( JsonHelper.ITEM_TYPE_KEY, getClass().getName());
-            obj.put( JsonHelper.NodeSchema.NODE_CENTRE_X_KEY, this.mX);
-            obj.put( JsonHelper.NodeSchema.NODE_CENTRE_Y_KEY, this.mY);
-            obj.put( JsonHelper.NodeSchema.NODE_RADIUS_KEY, this.mR);
-            obj.put( JsonHelper.ITEM_ID_KEY, this.getId());
-            obj.put( JsonHelper.NodeSchema.NODE_TITLE_KEY,this.mTitle);
-            obj.put( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY,this.mDescription);
-            obj.put( JsonHelper.NodeSchema.NODE_COLOR_KEY,this.mNodeColorID );
-            obj.put( JsonHelper.NodeSchema.NODE_SHAPE_KEY,this.mShape.toString() );
-            obj.put( JsonHelper.NodeSchema.NODE_TEXT_SIZE_KEY,this.mTextSize);
+            obj.put( FileHelper.ITEM_TYPE_KEY, getClass().getName());
+            obj.put( FileHelper.NodeSchema.NODE_CENTRE_X_KEY, this.mX);
+            obj.put( FileHelper.NodeSchema.NODE_CENTRE_Y_KEY, this.mY);
+            obj.put( FileHelper.NodeSchema.NODE_RADIUS_KEY, this.mR);
+            obj.put( FileHelper.ITEM_ID_KEY, this.getId());
+            obj.put( FileHelper.NodeSchema.NODE_TITLE_KEY,this.mTitle);
+            obj.put( FileHelper.NodeSchema.NODE_DESCRIPTION_KEY,this.mDescription);
+            obj.put( FileHelper.NodeSchema.NODE_COLOR_KEY,this.mNodeColorID );
+            obj.put( FileHelper.NodeSchema.NODE_SHAPE_KEY,this.mShape.toString() );
+            obj.put( FileHelper.NodeSchema.NODE_TEXT_SIZE_KEY,this.mTextSize);
             return obj;
 
         } catch (Exception e) {
-            Log.e(TAG, "toJson: ", e);
             return null;
         }
     }
@@ -277,17 +307,16 @@ public class Node implements MindMapDrawable{
     public static Node fromJson(JSONObject obj,MainView view) {
         try {
 
-            return new Node((float) obj.getDouble( JsonHelper.NodeSchema.NODE_CENTRE_X_KEY),
-                            (float) obj.getDouble( JsonHelper.NodeSchema.NODE_CENTRE_Y_KEY),
-                            (float)obj.getDouble( JsonHelper.NodeSchema.NODE_RADIUS_KEY),
-                            obj.getString( JsonHelper.ITEM_ID_KEY),view,
-                            obj.getString( JsonHelper.NodeSchema.NODE_TITLE_KEY),
-                            obj.getString( JsonHelper.NodeSchema.NODE_DESCRIPTION_KEY ),
-                            obj.getInt( JsonHelper.NodeSchema.NODE_COLOR_KEY ),
-                            shapeStringToEnum(obj.getString( JsonHelper.NodeSchema.NODE_SHAPE_KEY)),
-                            (float)obj.getDouble(JsonHelper.NodeSchema.NODE_TEXT_SIZE_KEY));
+            return new Node((float) obj.getDouble( FileHelper.NodeSchema.NODE_CENTRE_X_KEY),
+                            (float) obj.getDouble( FileHelper.NodeSchema.NODE_CENTRE_Y_KEY),
+                            (float)obj.getDouble( FileHelper.NodeSchema.NODE_RADIUS_KEY),
+                            obj.getString( FileHelper.ITEM_ID_KEY),view,
+                            obj.getString( FileHelper.NodeSchema.NODE_TITLE_KEY),
+                            obj.getString( FileHelper.NodeSchema.NODE_DESCRIPTION_KEY ),
+                            obj.getInt( FileHelper.NodeSchema.NODE_COLOR_KEY ),
+                            shapeStringToEnum(obj.getString( FileHelper.NodeSchema.NODE_SHAPE_KEY)),
+                            (float)obj.getDouble( FileHelper.NodeSchema.NODE_TEXT_SIZE_KEY));
         } catch (Exception e) {
-            Log.e(TAG, "fromJson: ", e);
             return null;
         }
     }

@@ -2,16 +2,24 @@ package com.mindmap.graphnetwork;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.annotation.TargetApi;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.Point;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
+import android.provider.MediaStore;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.PopupWindow;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -20,22 +28,14 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FilenameFilter;
 
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+
 public class MainActivity extends AppCompatActivity {
     private MainView mMainView;
-    private Point mButtonXY;
-    private static final String TAG = "MainActivity";
-    private JsonHelper mFileHelper;
+    private FileHelper mFileHelper;
     private File mCurrentFile = null;
-    PopupWindow mColorPallettePopupWindow;
-
-    /** returns left top location of a view **/
-    private Point getViewLocation(View view) {
-        int[] location = new int[2];
-        view.getLocationOnScreen(location);
-        int x = location[0] ;
-        int y = location[1] ;
-        return new Point(x, y);
-    }
+    ViewGroup mRoot;
+    View mOptions;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,56 +49,235 @@ public class MainActivity extends AppCompatActivity {
         ActionBar actionBar = getSupportActionBar();
         actionBar.hide();
 
-        setContentView( R.layout.activity_main );
+        LayoutInflater layoutInflater = (LayoutInflater) getSystemService( Context.LAYOUT_INFLATER_SERVICE);
+        setContentView( R.layout.activity_main);
         mMainView = findViewById(R.id.MainViewID);
-        mFileHelper = new JsonHelper(this);
+        mRoot = findViewById(R.id.RootConstraintView);
+        mFileHelper = new FileHelper(this);
+
+        mOptions = layoutInflater.inflate(R.layout.options,null);
+        mOptions.setVisibility(View.GONE);
+        mRoot.addView(mOptions);
+
+        InitOptions();
 
         ImageButton optionsButton =findViewById(R.id.options_button );
         optionsButton.setOnClickListener( new View.OnClickListener() {
+          @Override
+          public void onClick(View v) {
+              if(mOptions.getVisibility()==View.VISIBLE)
+                  closeOptions();
+              else
+                  openOptions();
+          }
+        } );
+
+    }
+
+    public void openOptions()
+    {
+        mOptions.setVisibility(View.VISIBLE);
+    }
+    public void closeOptions()
+    {
+        mOptions.setVisibility(View.GONE);
+    }
+
+
+    /**
+     * initialize listeners for options menu
+     */
+    private void InitOptions(){
+        LinearLayout linearlayoutMenuAbout = mOptions.findViewById(R.id.linearlayout_menu_about);
+        LinearLayout linearlayoutMenuHelp = mOptions.findViewById(R.id.linearlayout_menu_help);
+        LinearLayout linearlayoutMenuNew = mOptions.findViewById(R.id.linearlayout_menu_new_project);
+        LinearLayout linearlayoutMenuOpen = mOptions.findViewById(R.id.linearlayout_menu_open);
+        LinearLayout linearlayoutMenuSave = mOptions.findViewById(R.id.linearlayout_menu_save);
+        LinearLayout linearlayoutMenuExport = mOptions.findViewById(R.id.linearlayout_menu_export);
+        LinearLayout linearlayoutMenuDelete = mOptions.findViewById(R.id.linearlayout_menu_delete);
+
+        linearlayoutMenuAbout.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                fileDialog();
+                about();
+                closeOptions();
             }
         } );
+        linearlayoutMenuHelp.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                help();
+                closeOptions();
+            }
+        } );
+        linearlayoutMenuNew.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                newWorkingArea();
+                closeOptions();
+            }
+        } );
+        linearlayoutMenuOpen.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                loadFile();
+                closeOptions();
+            }
+        } );
+        linearlayoutMenuSave.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                saveFile();
+                closeOptions();
+            }
+        } );
+        linearlayoutMenuExport.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                exportFile();
+                closeOptions();
+            }
+        } );
+        linearlayoutMenuDelete.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                listItems(true);
+                closeOptions();
+            }
+        } );
+
     }
 
     /**
-     * Shows a dialog, lets the user choose file options
+     * Shows the about dialog.
      */
-    private void fileDialog() {
-        AlertDialog.Builder fileDialogBuilder = new AlertDialog.Builder(this);
-        fileDialogBuilder.setTitle(R.string.file);
-        fileDialogBuilder.setItems(R.array.file_options, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which) {
-                    case 0:
-                        newWorkingArea();
-                        break;
-                    case 1:
-                        loadFile();
-                        break;
-                    case 2:
-                        saveFile();
-                        break;
-                    case 3:
-                        //exportPrompt(); //TODO add export functionality
-                        break;
-                    case 4:
-                        listItems(true);
-                        break;
-                    default:
-                        break;
-                }
-            }
-        });
-        fileDialogBuilder.setNegativeButton(R.string.cancel_str, new DialogInterface.OnClickListener() {
+    public void about()
+    {
+
+        LayoutInflater layoutInflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View aboutLayout = layoutInflater.inflate(R.layout.about,null);
+        final AlertDialog.Builder aboutDialogBuilder = new AlertDialog.Builder( this );
+        aboutDialogBuilder.setView(aboutLayout);
+        aboutDialogBuilder.setNegativeButton(R.string.cancel_str, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
             }
         });
-        fileDialogBuilder.show();
+        aboutDialogBuilder.create().show();
+    }
+
+    /**
+     * Shows the help dialog.
+     */
+    public void help()
+    {
+
+        LayoutInflater layoutInflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View aboutLayout = layoutInflater.inflate(R.layout.help,null);
+        final AlertDialog.Builder helpDialogBuilder = new AlertDialog.Builder( this );
+        helpDialogBuilder.setView(aboutLayout);
+        helpDialogBuilder.setNegativeButton(R.string.cancel_str, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        helpDialogBuilder.create().show();
+    }
+
+    /**
+     * Prompt the user for a filename to use when saving the working area as an image
+     */
+    public void exportFile() {
+        if (!mMainView.isEmpty()) { //continue if it's not empty
+            AlertDialog.Builder exportImgDialogBuilder = new AlertDialog.Builder(this);
+            exportImgDialogBuilder.setTitle(R.string.export_dialog_title);
+            final EditText fileNameEditText = new EditText(this);
+            fileNameEditText.setHint(R.string.file_name_hint);
+            fileNameEditText.setSingleLine();
+            //if we are currently working on a file, set the text to that file's name
+            if (this.mCurrentFile != null)
+                fileNameEditText.setText(mCurrentFile.getName().substring(0,
+                        mCurrentFile.getName().length() - mFileHelper.EXTENSION.length()));
+            fileNameEditText.selectAll();
+            exportImgDialogBuilder.setView(fileNameEditText);
+            exportImgDialogBuilder.setPositiveButton(R.string.ok_str, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    exportImg(fileNameEditText.getText().toString());
+                }
+            });
+            exportImgDialogBuilder.setNegativeButton(R.string.cancel_str, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+            exportImgDialogBuilder.show();
+        } else //the working area is empty, let the user know & do nothing else
+            Toast.makeText( getApplicationContext(), R.string.nothing_to_export, Toast.LENGTH_SHORT ).show();
+    }
+
+    private static final int PERMISSION_REQUEST_CODE = 200;
+    private boolean checkPermission() {
+        return ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale( this, WRITE_EXTERNAL_STORAGE )) {
+            AlertDialog.Builder alertBuilder = new AlertDialog.Builder( this );
+            alertBuilder.setCancelable( true );
+            alertBuilder.setTitle( getString( R.string.permission_necessary_title ) );
+            alertBuilder.setMessage( R.string.permission_necessary_message);
+            alertBuilder.setPositiveButton( android.R.string.yes, new DialogInterface.OnClickListener() {
+                @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+                public void onClick(DialogInterface dialog, int which) {
+                    ActivityCompat.requestPermissions( MainActivity.this, new String[]{WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE );
+                }
+            } );
+            AlertDialog alert = alertBuilder.create();
+            alert.show();
+        } else {
+            ActivityCompat.requestPermissions( MainActivity.this, new String[]{WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE );
+        }
+
+    }
+
+
+    /**
+     * exports the current editorView as an image
+     * If the file already exists, warns the user about overwriting
+     *
+     * @param fileName to be used for the image
+     */
+    private void exportImg(String fileName) {
+        Bitmap img = mMainView.getBitmap();
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            File destFile = new File( mFileHelper.PICTURES_FOLDER, fileName + FileHelper.IMG_EXTENSION );
+            if (destFile.exists()) //because we're saving this file as an image, we don't want to update the editorView's
+                warnOverwrite( img, destFile, false );
+            else {
+                FileHelper.writeFile( img, destFile, this );
+                Toast.makeText( this,R.string.file_saved_in + destFile.getAbsolutePath(), Toast.LENGTH_SHORT ).show();
+            }
+        }
+        else {
+            if (!checkPermission())
+                requestPermission();
+            if (!checkPermission()) {
+                Toast.makeText( this, R.string.permission_necessary_message, Toast.LENGTH_SHORT ).show();
+                return;
+            }
+            String ImagePath = MediaStore.Images.Media.insertImage(
+                    getContentResolver(),
+                    img,
+                    fileName,
+                    ""
+            );
+            Toast.makeText( this, R.string.successfully_exported, Toast.LENGTH_SHORT ).show();
+        }
     }
 
     /**
@@ -150,9 +329,14 @@ public class MainActivity extends AppCompatActivity {
         overwriteWarning.setPositiveButton(R.string.yes_str, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                if (JsonHelper.writeFile(toWrite, destFile, getApplicationContext()))
+                if (FileHelper.writeFile(toWrite, destFile, getApplicationContext())) {
                     if (updateSavePending)
-                        mMainView.setSavePending(false); //only call setSavePending if we're told to change it
+                        mMainView.setSavePending( false ); //only call setSavePending if we're told to change it
+                    if(toWrite instanceof Bitmap)
+                        Toast.makeText(getApplicationContext(),R.string.file_saved_in + destFile.getAbsolutePath(), Toast.LENGTH_SHORT ).show();
+                    else
+                        Toast.makeText(getApplicationContext(),R.string.file_saved_successfully, Toast.LENGTH_SHORT ).show();
+                }
             }
         });
         overwriteWarning.setNegativeButton(R.string.no_str, new DialogInterface.OnClickListener() {
@@ -175,12 +359,11 @@ public class MainActivity extends AppCompatActivity {
         try {
             mCurrentFile = destFile;
             if (!destFile.exists())
-                JsonHelper.writeFile(obj, destFile, this);
+                FileHelper.writeFile(obj, destFile, this);
             else //the file already exists, warn the user that it will be overwritten
                 warnOverwrite(obj, destFile, true);
         } catch (Exception e) {
             Toast.makeText(this, R.string.save_error, Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "saveJsonToDisk: ", e);
         }
     }
 
@@ -194,7 +377,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public void checkAndSaveJson(final JSONObject obj, String fileName) {
         checkAndSaveJson(obj, new File(mFileHelper.MIND_MAP_FOLDER.getAbsolutePath() + "/"
-                + fileName + JsonHelper.EXTENSION));
+                + fileName + FileHelper.EXTENSION));
     }
 
 
@@ -239,9 +422,9 @@ public class MainActivity extends AppCompatActivity {
         if(file!=null){
             if (file.exists()) {
                 if (file.delete()) {
-                    Toast.makeText( this,"File Deleted",Toast.LENGTH_SHORT ).show();
+                    Toast.makeText( this,R.string.file_deleted,Toast.LENGTH_SHORT ).show();
                 } else {
-                    Toast.makeText( this,"File Not Deleted",Toast.LENGTH_SHORT ).show();
+                    Toast.makeText( this,R.string.file_not_deleted,Toast.LENGTH_SHORT ).show();
                 }
             }
         }
@@ -282,7 +465,7 @@ public class MainActivity extends AppCompatActivity {
             //get all the .map files from the directory
             final File MindMapFiles[] = mFileHelper.MIND_MAP_FOLDER.listFiles(new FilenameFilter() {
                 public boolean accept(File dir, String name) {
-                    return name.toLowerCase().endsWith( JsonHelper.EXTENSION.toLowerCase());
+                    return name.toLowerCase().endsWith( FileHelper.EXTENSION.toLowerCase());
                 }
             });
 
@@ -291,7 +474,7 @@ public class MainActivity extends AppCompatActivity {
                 final String fileNames[] = new String[MindMapFiles.length];
                 for (int i = 0; i < MindMapFiles.length; i++)
                     fileNames[i] = MindMapFiles[i].getName().substring(0, MindMapFiles[i].getName().length()
-                            - JsonHelper.EXTENSION.length());
+                            - FileHelper.EXTENSION.length());
                 AlertDialog.Builder listBuilder = new AlertDialog.Builder(this);
 
                 listBuilder.setItems(fileNames, new DialogInterface.OnClickListener() {
@@ -328,38 +511,36 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             Toast.makeText(this, R.string.load_list_error, Toast.LENGTH_LONG).show();
-            Log.e(TAG, "listLoadableItems: ", e);
         }
     }
 
     /**
      * loads a saved state from the given File
-     * Logs and shows a Toast when an exception is encountered
+     * shows a Toast when an exception is encountered
      *
      * @param f File with saved state to fileLoad
      */
     private void loadFromFile(File f) {
-        JSONObject obj = JsonHelper.getJsonFromFile(f, this); //create a JSONObject from the File
+        JSONObject obj = FileHelper.getJsonFromFile(f, this); //create a JSONObject from the File
         mCurrentFile = f; //this is referenced later on in saveAs and deleteFile
 
         //currentFile = f; //this is referenced later on in saveAs
         try {
-            mMainView.resetSpace((float)obj.getDouble(JsonHelper.SCALE_KEY)); //clear the view
+            mMainView.resetSpace((float)obj.getDouble( FileHelper.SCALE_KEY)); //clear the view
             //get a JSONArray with all the items
-            JSONArray arr = obj.getJSONArray(JsonHelper.ITEMS_KEY);
+            JSONArray arr = obj.getJSONArray( FileHelper.ITEMS_KEY);
 
             //for each item, add it to the view
             for (int i = 0; i < arr.length(); i++) {
-                if (arr.getJSONObject(i).getString( JsonHelper.ITEM_TYPE_KEY).equals(Node.class.getName()))
+                if (arr.getJSONObject(i).getString( FileHelper.ITEM_TYPE_KEY).equals(Node.class.getName()))
                     mMainView.addDrawable(Node.fromJson(arr.getJSONObject(i),mMainView));
-                else if (arr.getJSONObject(i).getString( JsonHelper.ITEM_TYPE_KEY).equals(Edge.class.getName()))
+                else if (arr.getJSONObject(i).getString( FileHelper.ITEM_TYPE_KEY).equals(Edge.class.getName()))
                     mMainView.addDrawable(Edge.fromJson(arr.getJSONObject(i),mMainView.getAllClassDrawables(),mMainView));
             }
 
             mMainView.setSavePending(false); //when we fileLoad, there are no more saves pending
 
         } catch (Exception e) {
-            Log.e(TAG, "loadFromJSON: ", e);
             Toast.makeText(this, R.string.load_error, Toast.LENGTH_LONG).show();
         }
     }

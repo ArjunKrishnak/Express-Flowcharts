@@ -3,20 +3,22 @@ package com.mindmap.graphnetwork;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.drawable.ColorDrawable;
-import android.nfc.tech.Ndef;
 import android.os.Build;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -43,8 +45,6 @@ enum DrawableType{
 
 public class MainView extends View implements View.OnClickListener,View.OnLongClickListener {
 
-    private static final String TAG = "MainView";
-
     //MainView state variables
     private MindMapDrawable mClicked = null; //null means none are clicked
     private MindMapDrawable mLongClicked = null; //null means none are long clicked
@@ -55,6 +55,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     private float mDownX,mDownY; //press down X,Y
     private boolean savePending = false; //used for saving file
     boolean mClickedNodeSelected = false;
+    boolean mExporting = false;
 
     //currently seleced preferences from details window
     private int mColorId = Color.BLUE; //selected color from details_window for either edge or node
@@ -85,7 +86,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     float mScaleFocusY = 0f;
     float MIN_SCALE = 0.25f;
     float MAX_SCALE = 4f;
-    float mChangeInscale = 1f;//TODO get rid of this?
+    float mChangeInscale = 1f;
     MotionEvent mEvent;
 
     //Not Saved in Json
@@ -146,13 +147,12 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 arr.put(drawable.toJson());
 
             JSONObject obj = new JSONObject();
-            obj.put(JsonHelper.SCALE_KEY, this.mScaleFactor);
-            obj.put(JsonHelper.ITEMS_KEY, arr);
+            obj.put( FileHelper.SCALE_KEY, this.mScaleFactor);
+            obj.put( FileHelper.ITEMS_KEY, arr);
             return obj;
 
         } catch (Exception e) {
-            Toast.makeText(mContext, "Save error", Toast.LENGTH_LONG).show();
-            Log.e(TAG,"Save error",e);
+            Toast.makeText(mContext, R.string.save_error, Toast.LENGTH_LONG).show();
             return null;
         }
     }
@@ -224,11 +224,8 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-//        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-//        paint.setColor( Color.RED );
-//        canvas.drawCircle(-100,-100,500,paint);
         for (MindMapDrawable drawable : mAllViewDrawables) {
-            if (drawable.onScreen( getWidth(), getHeight() ))
+            if (drawable.onScreen( getWidth(), getHeight() ) || mExporting)
                     drawable.draw(canvas);
         }
 
@@ -251,6 +248,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         super.onTouchEvent(event);
+        ((MainActivity)mContext).closeOptions();
         if(mViewTask == ViewTask.DETAILS_WINDOW) {
             return true;
         }
@@ -324,7 +322,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     float upX = event.getX();
                     float upY = event.getY();
                     Node toNode =  (Node)findItem(upX, upY,DrawableType.NODE);
-                    if(toNode == null){
+                    if(toNode == null || toNode == mEdge.getFromNode()){
                         if( mAllViewDrawables.size() > 0 )
                             mAllViewDrawables.remove( mAllViewDrawables.size() - 1 );
                     }
@@ -372,7 +370,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                        postInvalidate();
                    }
                }
-//               Toast.makeText( mContext, "Double Clicked  node", Toast.LENGTH_SHORT ).show();
                return;
            }
         }
@@ -383,7 +380,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         if(mClicked==null)
             mClicked = findItem(mDownX, mDownY,DrawableType.EDGE);
         if(mClicked!=null) {
-//            Toast.makeText( mContext, "Single Clicked  node", Toast.LENGTH_SHORT ).show();
 
             if(mClicked instanceof Node) {
                 if( mViewTask == ViewTask.IDLE)
@@ -488,6 +484,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
 
         if(mLongClicked!=null) { //only add delete button if we are editing
             final ImageButton deleteNodeButton = new ImageButton( mContext );
+            deleteNodeButton.setBackgroundColor(Color.TRANSPARENT);
             deleteNodeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
             deleteNodeButton.setImageDrawable(getResources().getDrawable(R.drawable.delete));
             deleteNodeButton.setOnClickListener( new View.OnClickListener() {
@@ -510,87 +507,99 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             }
         });
 
-        detailsLayout.findViewById(R.id.imageview_color_palette_pink).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-        detailsLayout.findViewById(R.id.imageview_color_palette_orange).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
+        final ViewGroup row1 = detailsLayout.findViewById( R.id.color_palette_row_1 );
+        final ViewGroup row2 = detailsLayout.findViewById( R.id.color_palette_row_2 );
+        for (int i = 0; i < row1.getChildCount(); i++) {
+            final View child = row1.getChildAt(i);
+            if(mColorId == ((ColorDrawable) child.getBackground()).getColor()){
+                if(mColorId == Color.BLACK || mColorId == Color.RED || mColorId ==Color.BLUE
+                        || mColorId == -65409 || mColorId == -65281 || mColorId == -8453889)
+                    ((ImageView)child).setImageDrawable(getResources().getDrawable(R.drawable.radio_white));
+                else
+                    ((ImageView)child).setImageDrawable(getResources().getDrawable(R.drawable.radio_black));
+            }
+            child.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    mColorId = ((ColorDrawable) view.getBackground()).getColor();
+                    for (int m = 0; m < row1.getChildCount(); m++) {
+                        ((ImageView)row1.getChildAt(m)).setImageDrawable(getResources().getDrawable(R.drawable.color_box ));
+                    }
+                    for (int m = 0; m < row2.getChildCount(); m++) {
+                        ((ImageView)row2.getChildAt(m)).setImageDrawable(getResources().getDrawable(R.drawable.color_box ));
+                    }
+                    if(mColorId == Color.BLACK || mColorId == Color.RED || mColorId ==Color.BLUE
+                            || mColorId == -65409 || mColorId == -65281 || mColorId == -8453889)
+                        ((ImageView)view).setImageDrawable(getResources().getDrawable(R.drawable.radio_white));
+                    else
+                        ((ImageView)view).setImageDrawable(getResources().getDrawable(R.drawable.radio_black));
+                }
+            });
+        }
+        for (int i = 0; i < row2.getChildCount(); i++) {
+            final View child = row2.getChildAt(i);
+            if(mColorId == ((ColorDrawable) child.getBackground()).getColor()){
+                if(mColorId == Color.BLACK || mColorId == Color.RED || mColorId ==Color.BLUE
+                        || mColorId == -65409 || mColorId == -65281 || mColorId == -8453889)
+                    ((ImageView)child).setImageDrawable(getResources().getDrawable(R.drawable.radio_white));
+                else
+                    ((ImageView)child).setImageDrawable(getResources().getDrawable(R.drawable.radio_black));
+            }
+            child.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    mColorId = ((ColorDrawable) view.getBackground()).getColor();
+                    for (int m = 0; m < row1.getChildCount(); m++) {
+                        ((ImageView)row1.getChildAt(m)).setImageDrawable(getResources().getDrawable(R.drawable.color_box ));
+                    }
+                    for (int m = 0; m < row2.getChildCount(); m++) {
+                        ((ImageView)row2.getChildAt(m)).setImageDrawable(getResources().getDrawable(R.drawable.color_box ));
+                    }
+                    if(mColorId == Color.BLACK || mColorId == Color.RED || mColorId ==Color.BLUE
+                            || mColorId == -65409 || mColorId == -65281 || mColorId == -8453889)
+                        ((ImageView)view).setImageDrawable(getResources().getDrawable(R.drawable.radio_white));
+                    else
+                        ((ImageView)view).setImageDrawable(getResources().getDrawable(R.drawable.radio_black));
+                }
+            });
+        }
 
-        detailsLayout.findViewById(R.id.imageview_color_palette_magenta).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-
-        detailsLayout.findViewById(R.id.imageview_color_palette_grey).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-
-        detailsLayout.findViewById(R.id.imageview_color_palette_green).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-
-        detailsLayout.findViewById(R.id.imageview_color_palette_cyan).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-
-        detailsLayout.findViewById(R.id.imageview_color_palette_chartreuse).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-        detailsLayout.findViewById(R.id.imageview_color_palette_blue).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-        detailsLayout.findViewById(R.id.imageview_color_palette_black).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-        detailsLayout.findViewById(R.id.imageview_color_palette_sky_blue).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-        detailsLayout.findViewById(R.id.imageview_color_palette_yellow).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-        detailsLayout.findViewById(R.id.imageview_color_palette_spring_green).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-        detailsLayout.findViewById(R.id.imageview_color_palette_red).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
-        detailsLayout.findViewById(R.id.imageview_color_palette_purple).setOnClickListener(  new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mColorId = ((ColorDrawable) view.getBackground()).getColor();
-            } });
 
         //Shape layout
         final LinearLayout shapeLinearLayout = detailsLayout.findViewById( R.id.shape_linear_layout );
 
         if(mLongClicked instanceof Edge) {
             final ImageButton leftArrowOnlyButton = new ImageButton( mContext );
+            final ImageButton rightArrowOnlyButton = new ImageButton( mContext );
+            final ImageButton doubleArrowButton = new ImageButton( mContext );
+            final ImageButton noArrowButton = new ImageButton( mContext );
+
+            leftArrowOnlyButton.setBackgroundColor(Color.TRANSPARENT);
+            rightArrowOnlyButton.setBackgroundColor(Color.TRANSPARENT);
+            doubleArrowButton.setBackgroundColor(Color.TRANSPARENT);
+            noArrowButton.setBackgroundColor(Color.TRANSPARENT);
+
+            switch (mArrowShape){
+                case START:
+                    if (mDownX > ((Edge) mLongClicked).getStartXY().x)
+                        leftArrowOnlyButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    else
+                        rightArrowOnlyButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    break;
+                case END:
+                    if (mDownX < ((Edge) mLongClicked).getStartXY().x)
+                        leftArrowOnlyButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    else
+                        rightArrowOnlyButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    break;
+                case DOUBLE:
+                    doubleArrowButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    break;
+                case NONE:
+                    noArrowButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    break;
+            }
+
             leftArrowOnlyButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
             leftArrowOnlyButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.left_arrow ));
             leftArrowOnlyButton.setOnClickListener( new View.OnClickListener() {
@@ -602,11 +611,14 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     else {
                         mArrowShape = ArrowShape.END;
                     }
+                    leftArrowOnlyButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    rightArrowOnlyButton.setBackgroundColor(Color.TRANSPARENT);
+                    doubleArrowButton.setBackgroundColor(Color.TRANSPARENT);
+                    noArrowButton.setBackgroundColor(Color.TRANSPARENT);
                 }
             } );
             shapeLinearLayout.addView( leftArrowOnlyButton );
 
-            final ImageButton rightArrowOnlyButton = new ImageButton( mContext );
             rightArrowOnlyButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
             rightArrowOnlyButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.right_arrow));
             rightArrowOnlyButton.setOnClickListener( new View.OnClickListener() {
@@ -616,54 +628,99 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                         mArrowShape = ArrowShape.START;
                     else
                         mArrowShape = ArrowShape.END;
+                    leftArrowOnlyButton.setBackgroundColor(Color.TRANSPARENT);
+                    rightArrowOnlyButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    doubleArrowButton.setBackgroundColor(Color.TRANSPARENT);
+                    noArrowButton.setBackgroundColor(Color.TRANSPARENT);
                 }
             } );
             shapeLinearLayout.addView( rightArrowOnlyButton );
 
-            final ImageButton doubleArrowButton = new ImageButton( mContext );
             doubleArrowButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
             doubleArrowButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.double_headed_arrow));
             doubleArrowButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     mArrowShape = ArrowShape.DOUBLE;
+                    leftArrowOnlyButton.setBackgroundColor(Color.TRANSPARENT);
+                    rightArrowOnlyButton.setBackgroundColor(Color.TRANSPARENT);
+                    doubleArrowButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    noArrowButton.setBackgroundColor(Color.TRANSPARENT);
                 }
             } );
             shapeLinearLayout.addView( doubleArrowButton );
 
-            final ImageButton noArrowButton = new ImageButton( mContext );
             noArrowButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
             noArrowButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.none_arrow));
             noArrowButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     mArrowShape = ArrowShape.NONE;
+                    leftArrowOnlyButton.setBackgroundColor(Color.TRANSPARENT);
+                    rightArrowOnlyButton.setBackgroundColor(Color.TRANSPARENT);
+                    doubleArrowButton.setBackgroundColor(Color.TRANSPARENT);
+                    noArrowButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
                 }
             } );
             shapeLinearLayout.addView( noArrowButton );
         }
         else{
             final ImageButton circleShapeButton = new ImageButton( mContext );
+            final ImageButton squareShapeButton = new ImageButton( mContext );
+            final ImageButton diamondShapeButton = new ImageButton( mContext );
+            circleShapeButton.setBackgroundColor(Color.TRANSPARENT);
+            squareShapeButton.setBackgroundColor(Color.TRANSPARENT);
+            diamondShapeButton.setBackgroundColor(Color.TRANSPARENT);
+            switch (mNodeShape){
+                case CIRCLE:
+                    circleShapeButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    break;
+                case SQUARE:
+                    squareShapeButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    break;
+                case DIAMOND:
+                    diamondShapeButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    break;
+            }
+
             circleShapeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
             circleShapeButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.circle));
             circleShapeButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     mNodeShape = NodeShape.CIRCLE;
+                    circleShapeButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    squareShapeButton.setBackgroundColor(Color.TRANSPARENT);
+                    diamondShapeButton.setBackgroundColor(Color.TRANSPARENT);
                 }
             } );
             shapeLinearLayout.addView( circleShapeButton );
 
-            final ImageButton squareShapeButton = new ImageButton( mContext );
             squareShapeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
             squareShapeButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.square ));
             squareShapeButton.setOnClickListener( new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
                     mNodeShape = NodeShape.SQUARE;
+                    circleShapeButton.setBackgroundColor(Color.TRANSPARENT);
+                    squareShapeButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                    diamondShapeButton.setBackgroundColor(Color.TRANSPARENT);
                 }
             } );
             shapeLinearLayout.addView( squareShapeButton );
+
+            diamondShapeButton.setLayoutParams( new LinearLayout.LayoutParams( 0, LinearLayout.LayoutParams.MATCH_PARENT, 1 ) );
+            diamondShapeButton.setImageDrawable(mContext.getResources().getDrawable(R.drawable.diamond ));
+            diamondShapeButton.setOnClickListener( new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    mNodeShape = NodeShape.DIAMOND;
+                    circleShapeButton.setBackgroundColor(Color.TRANSPARENT);
+                    squareShapeButton.setBackgroundColor(Color.TRANSPARENT);
+                    diamondShapeButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
+                }
+            } );
+            shapeLinearLayout.addView( diamondShapeButton );
         }
 
         detailsAlertDialog.show();
@@ -675,7 +732,6 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             }
         } );
     }
-
 
     public MindMapDrawable findItem(float x, float y){
         return findItem(x,y,null);
@@ -750,6 +806,40 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     public ArrayList<MindMapDrawable> getAllClassDrawables() {
         return mAllViewDrawables;
     }
-    
+
+    /**
+     * @return a Bitmap object containing this View's items
+     */
+    public Bitmap getBitmap() {
+        mExporting = true;
+        PointF topLeft = new PointF(0,0), bottomRight = new PointF( getWidth(),getHeight() );
+        for (MindMapDrawable drawable : mAllViewDrawables) {
+            if (drawable instanceof Node) {
+                PointF p = ((Node) drawable).getXY();
+                float r = ((Node) drawable).getR();
+                if (topLeft.x > p.x - 2 * r)
+                    topLeft.x = p.x - 2 * r;
+                if (topLeft.y > p.y - 2 * r)
+                    topLeft.y = p.y - 2 * r;
+                if (bottomRight.x < p.x + 2 * r)
+                    bottomRight.x = p.x + 2 * r;
+                if (bottomRight.y < p.y + 2 * r)
+                    bottomRight.y = p.y + 2 * r;
+            }
+        }
+        Bitmap result = Bitmap.createBitmap((int)(bottomRight.x - topLeft.x), (int)(bottomRight.y - topLeft.y),
+                Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(result);
+        canvas.drawColor(Color.WHITE);
+
+        for (MindMapDrawable drawable : mAllViewDrawables){
+            drawable.draw(canvas,topLeft);
+        }
+
+        mExporting = false;
+        return result;
+    }
+
+
 
 }

@@ -19,9 +19,13 @@
     <color name="sky_blue">#007fff</color>
     <color name="white">#ffffff</color>
 
+    <!-- button colors -->
+    <color name="tansparent70white">#b3ffffff</color>
+    <color name="transparent50grey">#807f7f7f</color>
+
     <!-- Style colors -->
-    <color name="colorPrimary">#008577</color>
-    <color name="colorPrimaryDark">#00574B</color>
+    <color name="colorPrimary">#007fff</color>
+    <color name="colorPrimaryDark">#0000ff</color>
     <color name="colorAccent">#D81B60</color>
 
 </resources>

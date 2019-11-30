@@ -7,7 +7,6 @@ import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.util.Log;
 
 import org.json.JSONObject;
 
@@ -16,8 +15,6 @@ import java.util.List;
 enum ArrowShape { START,END,DOUBLE,NONE };
 
 public class Edge implements MindMapDrawable{
-
-    private static final String TAG = "Edge";
 
     //Saved in Json
     private String mId;
@@ -67,6 +64,10 @@ public class Edge implements MindMapDrawable{
         return mDescription;
     }
 
+    public Node getFromNode() {
+        return mFromNode;
+    }
+
     @Override
     public void setTitle(String title){
         mTitle = title;
@@ -106,7 +107,7 @@ public class Edge implements MindMapDrawable{
         setEnd(endX,endY);
         init(parent);
         editable(true);
-        mId = JsonHelper.getUniqueID();
+        mId = FileHelper.getUniqueID();
     }
 
     //Called while decoding Json
@@ -175,12 +176,12 @@ public class Edge implements MindMapDrawable{
         mArrowHeadFillPaint.setColor(mEdgeColorID);
     }
 
-    String reduceText(String title){
+    String reduceText(String title,PointF start,PointF end){
         if(title.equals(""))
             return "";
         Rect boundTitle = new Rect();
         int length = title.length();
-        float pathLength = calculateDistance(new PointF(mStartX,mStartY),new PointF( mEndX,mEndY ));
+        float pathLength = calculateDistance(start,end);
         mTitlePaint.getTextBounds(title, 0, length, boundTitle);
         int x = boundTitle.width();
         int y = boundTitle.height();
@@ -195,7 +196,26 @@ public class Edge implements MindMapDrawable{
         }
         if(length==title.length())
             return title;
+        if(length<4)
+            return "...";
         return title.substring(0,length-3)+"...";
+    }
+
+    @Override
+    public void draw(Canvas canvas,PointF reference){
+        mStartX = mStartX-reference.x;
+        mStartY = mStartY-reference.y;
+        mEndX = mStartX-reference.x;
+        mEndY = mStartY-reference.y;
+        mFromNode.set(mFromNode.getXY().x-reference.x,mFromNode.getXY().y-reference.y);
+        mToNode.set(mToNode.getXY().x-reference.x,mToNode.getXY().y-reference.y);
+        draw( canvas );
+        mStartX = mStartX+reference.x;
+        mStartY = mStartY+reference.y;
+        mEndX = mStartX+reference.x;
+        mEndY = mStartY+reference.y;
+        mFromNode.set(mFromNode.getXY().x+reference.x,mFromNode.getXY().y+reference.y);
+        mToNode.set(mToNode.getXY().x+reference.x,mToNode.getXY().y+reference.y);
     }
 
     public void draw(Canvas canvas) {
@@ -278,7 +298,10 @@ public class Edge implements MindMapDrawable{
             mPath.moveTo(end.x, end.y);
             mPath.quadTo(end.x, end.y, start.x,start.y);
         }
-        canvas.drawTextOnPath(reduceText(mTitle),mPath,0,3*mEdgeStrokeWidth,mTitlePaint );
+        float voffset = 3*mEdgeStrokeWidth;
+        if(mCurrentScale<1)
+            voffset/=mCurrentScale;
+        canvas.drawTextOnPath(reduceText(mTitle,start,end),mPath,0,voffset,mTitlePaint );
 
     }
 
@@ -308,6 +331,33 @@ public class Edge implements MindMapDrawable{
                 start.y = mStartY + startR;
             }
         }
+        else if(mFromNode.getShape()==NodeShape.DIAMOND) {
+            float sin = (float) Math.sin( startAngle );
+            float cos = (float) Math.cos( startAngle );
+            if(sin>=0 && cos>0){
+                start.x = (-(float) Math.sqrt(2)*startR)/((sin/cos)+1) + mStartX ;
+                start.y = (-(float) Math.sqrt(2)*startR*(sin/cos))/((sin/cos)+1) + mStartY ;
+            }
+            if(sin>=0 && cos<0){
+                start.x = (-(float) Math.sqrt(2)*startR)/((sin/cos)-1) + mStartX;
+                start.y = (-(float) Math.sqrt(2)*startR*(sin/cos))/((sin/cos)-1) + mStartY ;
+            }
+            if(sin<=0 && cos<0){
+                start.x = ((float) Math.sqrt(2)*startR)/((sin/cos)+1) + mStartX ;
+                start.y = ((float) Math.sqrt(2)*startR*(sin/cos))/((sin/cos)+1) + mStartY ;
+            }
+            if(sin<=0 && cos>0){
+                start.x = ((float) Math.sqrt(2)*startR)/((sin/cos)-1) + mStartX;
+                start.y = ((float) Math.sqrt(2)*startR*(sin/cos))/((sin/cos)-1) + mStartY;
+            }
+            if(cos==0){
+                start.x = mStartX;
+                if(sin>0)
+                    start.y = mStartY - (float) Math.sqrt(2)*startR;
+                else
+                    start.y = mStartY + (float) Math.sqrt(2)*startR;
+            }
+        }
 
         float endR = mToNode.getR();
         if(mToNode.getShape()==NodeShape.CIRCLE) {
@@ -332,6 +382,33 @@ public class Edge implements MindMapDrawable{
             else if(sin < 0 && Math.abs(sin)>Math.abs(cos)){
                 end.x = mEndX + endR*cos/sin;
                 end.y = mEndY + endR;
+            }
+        }
+        else if(mToNode.getShape()==NodeShape.DIAMOND) {
+            float sin = (float) Math.sin( endAngle );
+            float cos = (float) Math.cos( endAngle );
+            if(sin>=0 && cos>0){
+                end.x = (-(float) Math.sqrt(2)*endR)/((sin/cos)+1) + mEndX ;
+                end.y = (-(float) Math.sqrt(2)*endR*(sin/cos))/((sin/cos)+1) + mEndY ;
+            }
+            if(sin>=0 && cos<0){
+                end.x = (-(float) Math.sqrt(2)*endR)/((sin/cos)-1) + mEndX;
+                end.y = (-(float) Math.sqrt(2)*endR*(sin/cos))/((sin/cos)-1) + mEndY ;
+            }
+            if(sin<=0 && cos<0){
+                end.x = ((float) Math.sqrt(2)*endR)/((sin/cos)+1) + mEndX ;
+                end.y = ((float) Math.sqrt(2)*endR*(sin/cos))/((sin/cos)+1) + mEndY ;
+            }
+            if(sin<=0 && cos>0){
+                end.x = ((float) Math.sqrt(2)*endR)/((sin/cos)-1) + mEndX;
+                end.y = ((float) Math.sqrt(2)*endR*(sin/cos))/((sin/cos)-1) + mEndY;
+            }
+            if(cos==0){
+                end.x = mEndX;
+                if(sin>0)
+                    end.y = mEndY - (float) Math.sqrt(2)*endR;
+                else
+                    end.y = mEndY + (float) Math.sqrt(2)*endR;
             }
         }
     }
@@ -407,7 +484,6 @@ public class Edge implements MindMapDrawable{
         mEndY*=scaleFactor;
         mCurrentScale = scale;
         mEdgeStrokeWidth = mEdgeStrokeWidth*scaleFactor;
-        mTextSize = mTextSize*scaleFactor;
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
     }
 
@@ -425,20 +501,19 @@ public class Edge implements MindMapDrawable{
     public JSONObject toJson() {
         try {
             JSONObject obj = new JSONObject();
-            obj.put( JsonHelper.ITEM_TYPE_KEY, getClass().getName());
-            obj.put( JsonHelper.EdgeSchema.EDGE_START_NODE_KEY, this.mFromNode.getId());
-            obj.put( JsonHelper.EdgeSchema.EDGE_END_NODE_KEY, this.mToNode.getId());
-            obj.put( JsonHelper.EdgeSchema.EDGE_STROKE_WIDTH_KEY, this.mEdgeStrokeWidth);
-            obj.put( JsonHelper.ITEM_ID_KEY, this.getId());
-            obj.put( JsonHelper.EdgeSchema.EDGE_TITLE_KEY, this.getTitle());
-            obj.put( JsonHelper.EdgeSchema.EDGE_DESCRIPTION_KEY, this.getDescription());
-            obj.put( JsonHelper.EdgeSchema.EDGE_COLOR_KEY, this.getColorID());
-            obj.put( JsonHelper.EdgeSchema.EDGE_ARROW_TYPE_KEY, this.getArrowShape().toString());
-            obj.put( JsonHelper.EdgeSchema.EDGE_TEXT_SIZE_KEY,this.mTextSize);
+            obj.put( FileHelper.ITEM_TYPE_KEY, getClass().getName());
+            obj.put( FileHelper.EdgeSchema.EDGE_START_NODE_KEY, this.mFromNode.getId());
+            obj.put( FileHelper.EdgeSchema.EDGE_END_NODE_KEY, this.mToNode.getId());
+            obj.put( FileHelper.EdgeSchema.EDGE_STROKE_WIDTH_KEY, this.mEdgeStrokeWidth);
+            obj.put( FileHelper.ITEM_ID_KEY, this.getId());
+            obj.put( FileHelper.EdgeSchema.EDGE_TITLE_KEY, this.getTitle());
+            obj.put( FileHelper.EdgeSchema.EDGE_DESCRIPTION_KEY, this.getDescription());
+            obj.put( FileHelper.EdgeSchema.EDGE_COLOR_KEY, this.getColorID());
+            obj.put( FileHelper.EdgeSchema.EDGE_ARROW_TYPE_KEY, this.getArrowShape().toString());
+            obj.put( FileHelper.EdgeSchema.EDGE_TEXT_SIZE_KEY,this.mTextSize);
             return obj;
 
         } catch (Exception e) {
-            Log.e(TAG, "toJson: ", e);
             return null;
         }
     }
@@ -466,8 +541,8 @@ public class Edge implements MindMapDrawable{
 
             Node startNode = null;
             Node endNode = null;
-            String startShapeId = jsonObject.getString(JsonHelper.EdgeSchema.EDGE_START_NODE_KEY);
-            String endShapeId = jsonObject.getString(JsonHelper.EdgeSchema.EDGE_END_NODE_KEY);
+            String startShapeId = jsonObject.getString( FileHelper.EdgeSchema.EDGE_START_NODE_KEY);
+            String endShapeId = jsonObject.getString( FileHelper.EdgeSchema.EDGE_END_NODE_KEY);
 
             for (MindMapDrawable shape : alldrDrawables) {
                 if (shape instanceof Node) {
@@ -478,12 +553,11 @@ public class Edge implements MindMapDrawable{
 
             //return a new arrow if we found both the items
             return (startNode == null || endNode == null) ? null
-                    : new Edge(startNode, endNode,jsonObject.getString( JsonHelper.ITEM_ID_KEY),view,jsonObject.getInt( JsonHelper.EdgeSchema.EDGE_COLOR_KEY),
-                    jsonObject.getString( JsonHelper.EdgeSchema.EDGE_TITLE_KEY),jsonObject.getString( JsonHelper.EdgeSchema.EDGE_DESCRIPTION_KEY),
-                    shapeStringToEnum(jsonObject.getString( JsonHelper.EdgeSchema.EDGE_ARROW_TYPE_KEY )),
-                    (float)jsonObject.getDouble(JsonHelper.EdgeSchema.EDGE_TEXT_SIZE_KEY));
+                    : new Edge(startNode, endNode,jsonObject.getString( FileHelper.ITEM_ID_KEY),view,jsonObject.getInt( FileHelper.EdgeSchema.EDGE_COLOR_KEY),
+                    jsonObject.getString( FileHelper.EdgeSchema.EDGE_TITLE_KEY),jsonObject.getString( FileHelper.EdgeSchema.EDGE_DESCRIPTION_KEY),
+                    shapeStringToEnum(jsonObject.getString( FileHelper.EdgeSchema.EDGE_ARROW_TYPE_KEY )),
+                    (float)jsonObject.getDouble( FileHelper.EdgeSchema.EDGE_TEXT_SIZE_KEY));
         } catch (Exception e) {
-            Log.e(TAG, "fromJson: ", e);
             return null;
         }
     }

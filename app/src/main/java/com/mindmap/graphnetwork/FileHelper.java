@@ -3,7 +3,6 @@ package com.mindmap.graphnetwork;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Environment;
-import android.util.Log;
 import android.widget.Toast;
 
 import org.json.JSONObject;
@@ -19,8 +18,7 @@ import java.util.UUID;
 /**
  * Use to manage Files, i.e. saving and loading
  */
-public final class JsonHelper {
-    private static final String TAG = "JsonHelper";
+public final class FileHelper {
 
     /** Location for all saved data*/
     public final File MIND_MAP_FOLDER;
@@ -65,20 +63,16 @@ public final class JsonHelper {
 
     }
 
-    public JsonHelper(Context context) {
-        MIND_MAP_FOLDER = new File(context.getExternalFilesDir(null).getAbsolutePath() + "/mindmap/");
-        PICTURES_FOLDER = new File(context.getExternalFilesDir(null).getAbsolutePath() + "/pictures/");
-        if (!MIND_MAP_FOLDER.exists())
-            if (!MIND_MAP_FOLDER.mkdir())
-                Log.e(TAG, "could not create MIND_MAP_FOLDER directory ["
-                        + MIND_MAP_FOLDER.getAbsolutePath() + "]");
 
-        if (!PICTURES_FOLDER.exists()) {
-            Log.w(TAG, "initialize: Pictures directory did not already exist. Attempting to create it now");
-            if (!PICTURES_FOLDER.mkdir())
-                Log.e(TAG, "initialize: could not create pictures directory ["
-                + PICTURES_FOLDER.getAbsolutePath() + "]");
-        }
+    public FileHelper(Context context) {
+        MIND_MAP_FOLDER = new File(context.getExternalFilesDir(null).getAbsolutePath() + "/mindmap/");
+        PICTURES_FOLDER = context.getExternalFilesDir( Environment.DIRECTORY_PICTURES);
+
+        if (!MIND_MAP_FOLDER.exists())
+            MIND_MAP_FOLDER.mkdir();
+
+        if (!PICTURES_FOLDER.exists())
+            PICTURES_FOLDER.mkdir();
     }
 
     /**
@@ -96,7 +90,6 @@ public final class JsonHelper {
         else if (obj instanceof Bitmap)
             return writeImageFile((Bitmap) obj, f, ctx);
         else {
-            Log.w(TAG, "writeFile: not designed to handle [" + obj.getClass().getSimpleName() + "]");
             return false;
         }
     }
@@ -115,11 +108,10 @@ public final class JsonHelper {
         try {
             if (destinationFile.exists()) destinationFile.delete();
             out = new FileOutputStream(destinationFile);
-            image.compress( Bitmap.CompressFormat.PNG, 100, out); // PNG is lossless --> 100 is ignored
+            image.compress( Bitmap.CompressFormat.JPEG, 80, out);
             Toast.makeText(ctx, R.string.save_successful, Toast.LENGTH_SHORT).show();
             return true;
         } catch (Exception e) {
-            Log.e(TAG, "writeImageFile: Error:", e);
             Toast.makeText(ctx, R.string.save_error, Toast.LENGTH_SHORT).show();
             return false;
         } finally {
@@ -150,7 +142,6 @@ public final class JsonHelper {
             Toast.makeText(ctx, R.string.save_successful, Toast.LENGTH_SHORT).show();
             return true;
         } catch (Exception e) {
-            Log.e(TAG, "writeFile: ", e);
             Toast.makeText(ctx, R.string.save_error, Toast.LENGTH_SHORT).show();
             return false;
         }
@@ -169,7 +160,6 @@ public final class JsonHelper {
             return new JSONObject(reader.readLine());
         } catch (Exception e) {
             Toast.makeText(ctx, R.string.load_error, Toast.LENGTH_LONG).show();
-            Log.e(TAG, "loadItem: ", e);
             return null;
         }
     }

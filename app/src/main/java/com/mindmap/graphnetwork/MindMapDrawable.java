@@ -1,6 +1,8 @@
 package com.mindmap.graphnetwork;
 
 import android.graphics.Canvas;
+import android.graphics.PointF;
+
 import org.json.JSONObject;
 
 /**
@@ -14,6 +16,7 @@ public interface MindMapDrawable {
      * @param c Canvas on which to draw the MindMapDrawable
      */
     void draw(Canvas c);
+    void draw(Canvas c, PointF reference);
 
     /**
      * returns if the item is in vieport of screen
