@@ -84,7 +84,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     ScaleGestureDetector mScaleDetector;
     float mScaleFocusX = 0f;
     float mScaleFocusY = 0f;
-    float MIN_SCALE = 0.25f;
+    float MIN_SCALE = 0.5f;
     float MAX_SCALE = 4f;
     float mChangeInscale = 1f;
     MotionEvent mEvent;
@@ -238,10 +238,8 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     }
 
     public void addNode(float x,float y,String title,String description,NodeShape shape,int color){
-//        Node node = new Node(mContext);
-//        node.initNode(x,y,this);
         Node node = new Node(x,y,this,title, description,shape);
-        node.set( x,y-node.getR() );//To make it display above the new node button
+        node.set( x,y);
         node.setColorID(color);
         addDrawable(node);
     }

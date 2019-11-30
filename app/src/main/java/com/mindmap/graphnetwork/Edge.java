@@ -168,7 +168,7 @@ public class Edge implements MindMapDrawable{
         mTitlePaint= new Paint();
         mTitlePaint.setColor( DEFAULT_TEXT_COLOR );
 
-        mTextSize = (DEFAULT_TEXT_SIZE*mCurrentScale);
+        mTextSize = DEFAULT_TEXT_SIZE;
         mTitlePaint.setTextSize(mTextSize);
         mTitlePaint.setTextAlign(Paint.Align.CENTER);
         mArrowHeadFillPaint = new Paint();
@@ -200,20 +200,20 @@ public class Edge implements MindMapDrawable{
             return "...";
         return title.substring(0,length-3)+"...";
     }
-
+//TODO rescale before exporting, change icon,inspect strings,file name empty prompt,
     @Override
     public void draw(Canvas canvas,PointF reference){
         mStartX = mStartX-reference.x;
         mStartY = mStartY-reference.y;
-        mEndX = mStartX-reference.x;
-        mEndY = mStartY-reference.y;
+        mEndX = mEndX-reference.x;
+        mEndY = mEndY-reference.y;
         mFromNode.set(mFromNode.getXY().x-reference.x,mFromNode.getXY().y-reference.y);
         mToNode.set(mToNode.getXY().x-reference.x,mToNode.getXY().y-reference.y);
         draw( canvas );
         mStartX = mStartX+reference.x;
         mStartY = mStartY+reference.y;
-        mEndX = mStartX+reference.x;
-        mEndY = mStartY+reference.y;
+        mEndX = mEndX+reference.x;
+        mEndY = mEndY+reference.y;
         mFromNode.set(mFromNode.getXY().x+reference.x,mFromNode.getXY().y+reference.y);
         mToNode.set(mToNode.getXY().x+reference.x,mToNode.getXY().y+reference.y);
     }

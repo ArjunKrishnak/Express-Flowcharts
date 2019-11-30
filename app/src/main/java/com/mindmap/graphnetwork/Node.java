@@ -138,7 +138,7 @@ public class Node implements MindMapDrawable{
         set(x,y);
         mTitlePaint= new Paint();
         mTitlePaint.setColor( DEFAULT_TITLE_COLOR );
-        mTextSize = DEFAULT_TEXT_SIZE*mCurrentScale;
+        mTextSize = DEFAULT_TEXT_SIZE;
         mTitlePaint.setTextSize(mTextSize);
         mTitlePaint.setTextAlign(Paint.Align.CENTER);
         setTitle(title);
@@ -147,8 +147,6 @@ public class Node implements MindMapDrawable{
     public void set(float x, float y) {
         mX = x;
         mY = y;
-        mPath.reset();
-        mPath.addCircle( mX, mY, mR, Path.Direction.CW );
     }
 
     public float distance(PointF p1,PointF p2){
@@ -297,6 +295,8 @@ public class Node implements MindMapDrawable{
             return NodeShape.CIRCLE;
         return NodeShape.SQUARE;
     }
+
+    //TODO text size and radius options?
 
     /**
      * get a UmlNoteNode from a JSONObject
