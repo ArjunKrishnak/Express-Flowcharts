@@ -1,4 +1,4 @@
-package com.mindmap.graphnetwork;
+package com.mindmap.fastuml;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -27,7 +27,7 @@ public class Node implements MindMapDrawable{
     private static final int DEFAULT_NODE_COLOR = Color.BLUE;
     public static final float DEFAULT_NODE_RADIUS = 100;//making it available for MainActivity for new node creation
     private static final int DEFAULT_TITLE_COLOR = Color.BLACK;
-    private static final int DEFAULT_TEXT_SIZE = 30;
+    private static final int DEFAULT_TEXT_SIZE = 40;
     //Node state variables
     private MainView mParentView;
     private float mCurrentScale = 1f;
@@ -228,8 +228,9 @@ public class Node implements MindMapDrawable{
         mX = mX*scaleFactor;
         mY = mY*scaleFactor;
         mR = mR*scaleFactor;
-        mTextSize = mTextSize*scaleFactor;
         mCurrentScale = scale;
+        mTextSize = (float) Math.max(DEFAULT_TEXT_SIZE, DEFAULT_TEXT_SIZE*mCurrentScale*0.5);
+        mTitlePaint.setTextSize(mTextSize);
     }
 
 
@@ -295,8 +296,6 @@ public class Node implements MindMapDrawable{
             return NodeShape.CIRCLE;
         return NodeShape.SQUARE;
     }
-
-    //TODO text size and radius options?
 
     /**
      * get a UmlNoteNode from a JSONObject

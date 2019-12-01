@@ -1,4 +1,4 @@
-package com.mindmap.graphnetwork;
+package com.mindmap.fastuml;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -176,7 +176,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 return true;
             mScaleFocusX = detector.getFocusX();
             mScaleFocusY = detector.getFocusY();
-            scaleDrawables(mScaleFocusX,mScaleFocusY);
+            scaleDrawables(mScaleFocusX,mScaleFocusY,true);
             return true;
         }
         @Override
@@ -274,7 +274,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     mShiftY = moveY-mSwipeDownY;
                     mSwipeDownX = moveX;
                     mSwipeDownY = moveY;
-                    moveDrawables();
+                    moveDrawables(true);
                     return true;
                 }
 
@@ -777,15 +777,16 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         node.set( moveX, moveY );
     }
 
-    public void moveDrawables(){
+    public void moveDrawables(boolean postInvalidate){
         for (MindMapDrawable drawable : mAllViewDrawables) {
             drawable.move(mShiftX,mShiftY);
         }
         savePending = true;
-        postInvalidate();
+        if(postInvalidate)
+            postInvalidate();
     }
 
-    public void scaleDrawables(float focusX,float focusY){
+    public void scaleDrawables(float focusX,float focusY,boolean postInvaclidate){
         for (MindMapDrawable drawable : mAllViewDrawables) {
             drawable.scale(mScaleFactor);
         }
@@ -793,7 +794,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         float scaledFocusY =  focusY*mChangeInscale;
         mShiftX = focusX - scaledFocusX;
         mShiftY = focusY - scaledFocusY;
-        moveDrawables();
+        moveDrawables(postInvaclidate);
 //        savePending = true;
 //        postInvalidate();
     }
@@ -810,6 +811,11 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
      */
     public Bitmap getBitmap() {
         mExporting = true;
+        float oldChnageInScale = mChangeInscale;
+        if(mScaleFactor!=1) {
+            mChangeInscale = 1 / mScaleFactor;
+            scaleDrawables( getWidth(), getHeight(),false );
+        }
         PointF topLeft = new PointF(0,0), bottomRight = new PointF( getWidth(),getHeight() );
         for (MindMapDrawable drawable : mAllViewDrawables) {
             if (drawable instanceof Node) {
@@ -832,6 +838,12 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
 
         for (MindMapDrawable drawable : mAllViewDrawables){
             drawable.draw(canvas,topLeft);
+        }
+
+        if(mScaleFactor!=1) {
+            mChangeInscale = mScaleFactor;
+            scaleDrawables( getWidth(), getHeight(),false );
+            mChangeInscale = oldChnageInScale;
         }
 
         mExporting = false;

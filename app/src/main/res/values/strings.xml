@@ -1,22 +1,22 @@
 <resources>
-    <string name="app_name">GraphNetwork</string>
+    <string name="app_name">FastUML</string>
 
     <!--New Alert Dialog-->
-    <string name="new_class_diagram_dialog_title">New Diagram</string>
-    <string name="new_class_diagram_dialod_body">Reset the working area and make a new diagram?</string>
+    <string name="new_diagram_dialog_title">New diagram</string>
+    <string name="new_diagram_dialod_body">Reset the working area and make a new diagram?</string>
 
     <!--Saving Alert Dialog-->
-    <string name="file_name_hint">Enter File Name</string>
-    <string name="save_as">Save As&#8230;</string>
+    <string name="file_name_hint">Enter file name</string>
+    <string name="save_as">Save as&#8230;</string>
     <string name="save_successful">Save successful</string>
     <string name="save_error">Error saving. Please try again</string>
 
     <!--Overwriting Alert Dialog-->
-    <string name="overwrite_dialog_title">File Already Exists</string>
-    <string name="overwrite_dialog_body">The already exists, would you like to overwrite it?</string>
+    <string name="overwrite_dialog_title">File already exists</string>
+    <string name="overwrite_dialog_body">This file already exists, would you like to overwrite it?</string>
 
     <!--Changes Pending Alert Dialog-->
-    <string name="changes_pending_dialog_title">Changes Pending</string>
+    <string name="changes_pending_dialog_title">Changes pending</string>
     <string name="changes_pending_dialog_body">You have unsaved changes, are you sure you want to continue?</string>
 
     <!--Misc-->
@@ -27,19 +27,19 @@
     <string name="cancel_str">Cancel</string>
 
     <!--Loading-->
-    <string name="pick_file_title">Pick a File</string>
+    <string name="pick_file_title">Pick a file</string>
     <string name="load_error">Error loading. Please try again</string>
     <string name="load_list_error">Could not load items</string>
 
-    <string name="no_mindmap_items_dialog_title">No Saved Files</string>
-    <string name="no_mindmap_items_dialog_body">There are no MindMap files saved on your device.</string>
+    <string name="no_mindmap_items_dialog_title">No saved files</string>
+    <string name="no_mindmap_items_dialog_body">There are no FastUML files saved on your device.</string>
 
     <!--New Or Edit node Alert Dialog-->
-    <string name="new_node">New Node</string>
-    <string name="name_hint">Enter Name</string>
-    <string name="description_hint">Enter Description</string>
-    <string name="edit_node">Edit Node</string>
-    <string name="edit_edge">Edit Edge</string>
+    <string name="new_node">New node</string>
+    <string name="name_hint">Enter name</string>
+    <string name="description_hint">Enter description</string>
+    <string name="edit_node">Edit node</string>
+    <string name="edit_edge">Edit edge</string>
     <string name="delete_button">Delete</string>
 
     <!--Options Menu-->
@@ -53,33 +53,37 @@
 
     <!--Export Dialog-->
     <string name="export">Export</string>
-    <string name="export_dialog_title">Export Image</string>
+    <string name="export_dialog_title">Export image</string>
     <string name="export_dialog_body">Enter a name for the image.</string>
     <string name="export_success_toast">Image saved to your gallery.</string>
 
     <!--about-->
-    <string name="about_text_created_by" >"Devoloped and designed by Arjun Krishna"</string>
+    <string name="about_text_created_by" >"Developed and designed by Arjun Krishna"</string>
     <string name="about_text_rating" >"Please considering supporting by giving 5 stars :)"</string>
+    <string name="icon_credit" >"Icons made by Freepik from www.flaticon.com"</string>
 
     <!--help-->
     <string name="bullet">\u2022</string>
-    <string name="zoom_help">"Pinch out with two fingers to zoom and pinch in to zoom out"</string>
-    <string name="pan_help">"Drag screen using two fingers to pan"</string>
-    <string name="add_node_help">"Long press in an empty space to create a node"</string>
-    <string name="move_node_help">"To move a node click on it and the drag it to the desired position"</string>
-    <string name="add_edge_help">"Double press a node to start creating a new edge from that node then drag the cursor of edge to the destination node to create the edge"</string>
-    <string name="details_window_help">"Long pressing any node or edge will give a pop up window to edit selected items properties or to delete it "</string>
-    <string name="options_help">"You can use the options menu to save the diagram or export it as an image"</string>
+    <string name="zoom_help">"Pinch out with two fingers to zoom and pinch in to zoom out."</string>
+    <string name="pan_help">"Drag screen using two fingers to pan."</string>
+    <string name="add_node_help">"Long press in an empty space to create a node."</string>
+    <string name="move_node_help">"To move a node click on it and the drag it to the desired position."</string>
+    <string name="add_edge_help">"Double press a node to start creating a new edge from that node then drag the cursor of edge to the destination node to create the edge."</string>
+    <string name="details_window_help">"Long pressing any node or edge will give a pop up window to edit selected items properties or to delete it."</string>
+    <string name="options_help">"You can use the options menu to save the diagram or export it as an image."</string>
 
     <!--permission alert-->
-    <string name="permission_necessary_title">permission_necessary</string>
-    <string name="permission_necessary_message">storage permission is necessary to export</string>
+    <string name="permission_necessary_title">Write permission necessary!</string>
+    <string name="permission_necessary_message">Storage write permission is necessary to export.</string>
+
+
     <string name="successfully_exported">File exported to galley.</string>
     <string name="file_saved_in">File saved in :</string>
-    <string name="file_saved_successfully">File saved successfully</string>
+    <string name="file_saved_successfully">File saved successfully.</string>
     <string name="nothing_to_export">Nothing to export.</string>
     <string name="file_deleted">File Deleted.</string>
     <string name="file_not_deleted">File not deleted.</string>
+    <string name="file_name_required">"Please enter file name!"</string>
 
 
 </resources>

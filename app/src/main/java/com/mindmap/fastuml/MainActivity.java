@@ -1,4 +1,4 @@
-package com.mindmap.graphnetwork;
+package com.mindmap.fastuml;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -205,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
             exportImgDialogBuilder.setPositiveButton(R.string.ok_str, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    exportImg(fileNameEditText.getText().toString());
+                    //overrided later
                 }
             });
             exportImgDialogBuilder.setNegativeButton(R.string.cancel_str, new DialogInterface.OnClickListener() {
@@ -214,7 +214,23 @@ public class MainActivity extends AppCompatActivity {
                     dialog.dismiss();
                 }
             });
-            exportImgDialogBuilder.show();
+
+            final AlertDialog exportImgDialog = exportImgDialogBuilder.create();
+            exportImgDialog.show();
+
+            exportImgDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if ("".equals(fileNameEditText.getText().toString().trim())) {
+                        fileNameEditText.setError(getString( R.string.file_name_required ));
+                        return;
+                    }
+                    exportImg(fileNameEditText.getText().toString());
+                    exportImgDialog.dismiss();
+                }
+            });
+
+
         } else //the working area is empty, let the user know & do nothing else
             Toast.makeText( getApplicationContext(), R.string.nothing_to_export, Toast.LENGTH_SHORT ).show();
     }
@@ -288,10 +304,10 @@ public class MainActivity extends AppCompatActivity {
         if (!mMainView.isEmpty() && mMainView.getSavePending()) {
 
             AlertDialog.Builder resetAreaDialog = new AlertDialog.Builder(this);
-            resetAreaDialog.setTitle(R.string.new_class_diagram_dialog_title);
+            resetAreaDialog.setTitle(R.string.new_diagram_dialog_title );
             //the message is dependent on if unsaved changes are present
             resetAreaDialog.setMessage(mMainView.getSavePending() ? R.string.changes_pending_dialog_body
-                    : R.string.new_class_diagram_dialod_body);
+                    : R.string.new_diagram_dialod_body );
             resetAreaDialog.setNegativeButton(R.string.no_str, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
@@ -400,9 +416,7 @@ public class MainActivity extends AppCompatActivity {
             saveFileBuilder.setPositiveButton(R.string.done_str, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    //check if the file exists and warn the user if it does
-                    checkAndSaveJson(obj, fileNameEditText.getText().toString());
-                    mMainView.setSavePending(false); //once we've saved, we don't have changes pending
+                   //overriden later
                 }
             });
             saveFileBuilder.setNegativeButton(R.string.cancel_str, new DialogInterface.OnClickListener() {
@@ -411,7 +425,22 @@ public class MainActivity extends AppCompatActivity {
                     dialog.dismiss();
                 }
             });
-            saveFileBuilder.show();
+            final AlertDialog saveFileDialog = saveFileBuilder.create();
+            saveFileDialog.show();
+
+            saveFileDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if ("".equals(fileNameEditText.getText().toString().trim())) {
+                        fileNameEditText.setError(getString( R.string.file_name_required ));
+                        return;
+                    }
+                    //check if the file exists and warn the user if it does
+                    checkAndSaveJson(obj, fileNameEditText.getText().toString());
+                    mMainView.setSavePending(false); //once we've saved, we don't have changes pending
+                    saveFileDialog.dismiss();
+                }
+            });
         }
     }
 

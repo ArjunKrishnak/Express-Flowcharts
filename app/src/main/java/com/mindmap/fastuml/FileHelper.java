@@ -1,4 +1,4 @@
-package com.mindmap.graphnetwork;
+package com.mindmap.fastuml;
 
 import android.content.Context;
 import android.graphics.Bitmap;

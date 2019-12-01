@@ -1,4 +1,4 @@
-package com.mindmap.graphnetwork;
+package com.mindmap.fastuml;
 
 import android.graphics.Canvas;
 import android.graphics.PointF;

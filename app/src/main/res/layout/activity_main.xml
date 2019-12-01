@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.mindmap.graphnetwork.MainView
+    <com.mindmap.fastuml.MainView
         android:id="@+id/MainViewID"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -16,7 +16,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-    </com.mindmap.graphnetwork.MainView>
+    </com.mindmap.fastuml.MainView>
 
     <ImageButton
         android:id="@+id/options_button"

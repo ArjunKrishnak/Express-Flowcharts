@@ -1,4 +1,4 @@
-package com.mindmap.graphnetwork;
+package com.mindmap.fastuml;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -30,7 +30,7 @@ public class Edge implements MindMapDrawable{
     private static final int DEFAULT_STROKE_WIDTH = 12,DEFAULT_EDGE_COLOR = Color.RED;
     private static final float DEFAULT_CURSOR_RADIUS = 30, DEFAULT_CURSOR_STROKE_WIDTH = 4f;
     private static final int DEFAULT_TEXT_COLOR = Color.BLACK;
-    private static final int DEFAULT_TEXT_SIZE = 30;
+    private static final int DEFAULT_TEXT_SIZE = 40;
 
     private Path mPath,mStartCursorPath,mEndCursorPath;
     private Paint mPaint,mCursorPaint,mTitlePaint, mArrowHeadFillPaint;
@@ -200,7 +200,7 @@ public class Edge implements MindMapDrawable{
             return "...";
         return title.substring(0,length-3)+"...";
     }
-//TODO rescale before exporting, change icon,inspect strings,file name empty prompt,
+
     @Override
     public void draw(Canvas canvas,PointF reference){
         mStartX = mStartX-reference.x;
@@ -485,6 +485,8 @@ public class Edge implements MindMapDrawable{
         mCurrentScale = scale;
         mEdgeStrokeWidth = mEdgeStrokeWidth*scaleFactor;
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
+        mTextSize = (float) Math.max(DEFAULT_TEXT_SIZE, DEFAULT_TEXT_SIZE*mCurrentScale*0.5);
+        mTitlePaint.setTextSize(mTextSize);
     }
 
     @Override
