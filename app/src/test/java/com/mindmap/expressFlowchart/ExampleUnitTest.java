@@ -1,11 +1,11 @@
-package com.mindmap.fastuml;
+package com.mindmap.expressFlowchart;
 
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 /**
- * Example local unit fuml_icon, which will execute on the development machine (host).
+ * Example local unit express_flowchart_icon, which will execute on the development machine (host).
  *
  * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
  */

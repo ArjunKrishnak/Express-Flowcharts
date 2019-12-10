@@ -1,4 +1,4 @@
-package com.mindmap.fastuml;
+package com.mindmap.expressFlowchart;
 
 import android.content.Context;
 
@@ -11,7 +11,7 @@ import org.junit.runner.RunWith;
 import static org.junit.Assert.*;
 
 /**
- * Instrumented fuml_icon, which will execute on an Android device.
+ * Instrumented express_flowchart_icon, which will execute on an Android device.
  *
  * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
  */
@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 public class ExampleInstrumentedTest {
     @Test
     public void useAppContext() {
-        // Context of the app under fuml_icon.
+        // Context of the app under express_flowchart_icon.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
         assertEquals( "com.mindmap.graphnetwork", appContext.getPackageName() );
