@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.mindmap.fastuml.MainView
+    <com.mindmap.expressFlowchart.MainView
         android:id="@+id/MainViewID"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -16,17 +16,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-    </com.mindmap.fastuml.MainView>
+    </com.mindmap.expressFlowchart.MainView>
 
     <ImageButton
         android:id="@+id/options_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
+        android:background="@color/tansparent70white"
         android:src="@drawable/hamburger_lines"
         app:layout_constraintStart_toStartOf="@+id/MainViewID"
         app:layout_constraintTop_toTopOf="@+id/MainViewID"
         android:padding="5dp"
         android:gravity="start|center_vertical"/>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

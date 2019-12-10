@@ -1,4 +1,4 @@
-package com.mindmap.fastuml;
+package com.mindmap.expressFlowchart;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -6,9 +6,14 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Build;
@@ -19,8 +24,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.InterstitialAd;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -34,12 +45,17 @@ public class MainActivity extends AppCompatActivity {
     private MainView mMainView;
     private FileHelper mFileHelper;
     private File mCurrentFile = null;
+    private InterstitialAd mInterstitialAd;
+    private boolean mAdCalledByNew;
     ViewGroup mRoot;
     View mOptions;
+    private String CHANNEL_ID = "Foreground export service channel";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate( savedInstanceState );
+
 
         // Hide the status bar.
         View decorView = getWindow().getDecorView();
@@ -48,6 +64,8 @@ public class MainActivity extends AppCompatActivity {
         // Hide action bar
         ActionBar actionBar = getSupportActionBar();
         actionBar.hide();
+
+        createNotificationChannel();
 
         LayoutInflater layoutInflater = (LayoutInflater) getSystemService( Context.LAYOUT_INFLATER_SERVICE);
         setContentView( R.layout.activity_main);
@@ -72,6 +90,35 @@ public class MainActivity extends AppCompatActivity {
           }
         } );
 
+        mInterstitialAd = new InterstitialAd(this);
+        mInterstitialAd.setAdUnitId(getResources().getString(R.string.admob_interstitial_id));
+        mInterstitialAd.loadAd(new AdRequest.Builder().build());
+
+        mInterstitialAd.setAdListener(new AdListener() {
+            @Override
+            public void onAdClosed() {
+                if(mAdCalledByNew) {
+                    newWorkingArea();
+                    closeOptions();
+                }
+                else{
+                    exportFile();
+                    closeOptions();
+                }
+                // Load the next interstitial.
+                mInterstitialAd.loadAd(new AdRequest.Builder().build());
+            }
+
+        });
+
+        SharedPreferences pref = this.getApplicationContext().getSharedPreferences(getString(R.string.preference_file_name) , Activity.MODE_PRIVATE );
+        SharedPreferences.Editor editor = pref.edit();
+        boolean launching_app_first_time = pref.getBoolean(getString(R.string.launching_time),true);
+        if(launching_app_first_time) {
+            editor.putBoolean( getString(R.string.launching_time), false );
+            editor.apply();
+            help(true);
+        }
     }
 
     public void openOptions()
@@ -106,15 +153,21 @@ public class MainActivity extends AppCompatActivity {
         linearlayoutMenuHelp.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                help();
+                help(false);
                 closeOptions();
             }
         } );
         linearlayoutMenuNew.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                newWorkingArea();
-                closeOptions();
+                if (mInterstitialAd.isLoaded()) {
+                    mAdCalledByNew = true;
+                    mInterstitialAd.show();
+                }
+                else {
+                    newWorkingArea();
+                    closeOptions();
+                }
             }
         } );
         linearlayoutMenuOpen.setOnClickListener( new View.OnClickListener() {
@@ -134,8 +187,14 @@ public class MainActivity extends AppCompatActivity {
         linearlayoutMenuExport.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                exportFile();
-                closeOptions();
+                if (mInterstitialAd.isLoaded()) {
+                    mAdCalledByNew = false;
+                    mInterstitialAd.show();
+                }
+                else {
+                    exportFile();
+                    closeOptions();
+                }
             }
         } );
         linearlayoutMenuDelete.setOnClickListener( new View.OnClickListener() {
@@ -170,19 +229,25 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Shows the help dialog.
      */
-    public void help()
+    public void help(boolean calledAtLaunchTime)
     {
 
         LayoutInflater layoutInflater = (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        View aboutLayout = layoutInflater.inflate(R.layout.help,null);
+        View helpLayout = layoutInflater.inflate(R.layout.help,null);
         final AlertDialog.Builder helpDialogBuilder = new AlertDialog.Builder( this );
-        helpDialogBuilder.setView(aboutLayout);
+        helpDialogBuilder.setView(helpLayout);
         helpDialogBuilder.setNegativeButton(R.string.cancel_str, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
             }
         });
+        if(calledAtLaunchTime) {
+            ImageView imageview_help_title = helpLayout.findViewById(R.id.imageview_help_title);
+            imageview_help_title.setImageDrawable(getResources().getDrawable(R.drawable.welcome_icon));
+            TextView textview_help_title = helpLayout.findViewById(R.id.textview_help_title);
+            textview_help_title.setText(getString(R.string.welcome_text));
+        }
         helpDialogBuilder.create().show();
     }
 
@@ -574,5 +639,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel serviceChannel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Export service channel",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
 
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            manager.createNotificationChannel(serviceChannel);
+        }
+    }
 }

@@ -1,8 +1,9 @@
-package com.mindmap.fastuml;
+package com.mindmap.expressFlowchart;
 
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -16,15 +17,19 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.core.content.ContextCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -61,13 +66,16 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     private int mColorId = Color.BLUE; //selected color from details_window for either edge or node
     private NodeShape mNodeShape = NodeShape.CIRCLE;
     private ArrowShape mArrowShape = ArrowShape.NONE;
+    private float mNodeRadius = Node.DEFAULT_NODE_RADIUS;
+    private float mEdgeStrokeWidth = Edge.DEFAULT_STROKE_WIDTH;
 
     //remembering last seleced preferences from details window
     private NodeShape lastSelectedNodeShape = NodeShape.CIRCLE;
     private int lastSelectedNodeColor = Color.BLUE;
     private int lastSelectedEdgeColor = Color.BLACK;
     private ArrowShape lastSelectedArrowShape = ArrowShape.NONE;
-
+    private float lastSelectedNodeRadius = Node.DEFAULT_NODE_RADIUS;
+    private float lastSelectedStrokeWidth = Edge.DEFAULT_STROKE_WIDTH;
 
     //Saved in Json
     private ArrayList<MindMapDrawable> mAllViewDrawables;
@@ -107,6 +115,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
      */
     public void resetSpace(){
         resetSpace(1.0f);
+        Toast.makeText(mContext,R.string.new_working_area, Toast.LENGTH_SHORT ).show();
     }
     public void resetSpace(float scale) {
         mAllViewDrawables.clear();
@@ -237,10 +246,12 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         postInvalidate();
     }
 
-    public void addNode(float x,float y,String title,String description,NodeShape shape,int color){
+    public void addNode(float x,float y,String title,String description,NodeShape shape,int color,float mNodeRadius){
         Node node = new Node(x,y,this,title, description,shape);
         node.set( x,y);
         node.setColorID(color);
+        if(mNodeRadius==Node.NODE_RADIUS_WARP_TEXT)
+            node.setR(mNodeRadius);
         addDrawable(node);
     }
     @Override
@@ -362,6 +373,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                        mEdge.setFromNode((Node)mClicked);
                        mEdge.setArrowShape(lastSelectedArrowShape);
                        mEdge.setColorID(lastSelectedEdgeColor);
+                       mEdge.setEdgeStrokeWidth(lastSelectedStrokeWidth);
                        mAllViewDrawables.add( mEdge );
                        mViewTask = ViewTask.MOVE_EDGE;
                        savePending = true;
@@ -434,10 +446,14 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             nameEditText.setText( (mLongClicked).getTitle() );
             descriptionEditText.setText( (mLongClicked).getDescription() );
             mColorId = mLongClicked.getColorID();
-            if(mLongClicked instanceof Node)
-                mNodeShape = ((Node)mLongClicked).getShape();
-            else if(mLongClicked instanceof Edge)
-                mArrowShape = ((Edge)mLongClicked).getArrowShape();
+            if(mLongClicked instanceof Node) {
+                mNodeShape = ((Node) mLongClicked).getShape();
+                mNodeRadius = ((Node) mLongClicked).getR();
+            }
+            else if(mLongClicked instanceof Edge) {
+                mArrowShape = ((Edge) mLongClicked).getArrowShape();
+                mEdgeStrokeWidth = ((Edge) mLongClicked).getEdgeStrokeWidth();
+            }
         }
 
 
@@ -445,6 +461,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         if(mLongClicked == null){
             mColorId = lastSelectedNodeColor;
             mNodeShape = lastSelectedNodeShape;
+            mNodeRadius=lastSelectedNodeRadius;
         }
 
         final ImageButton setButton = detailsLayout.findViewById(R.id.set_button );
@@ -454,9 +471,10 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
             public void onClick(View view) {
 
                 if(mLongClicked==null) {
-                    addNode( mDownX, mDownY, nameEditText.getText().toString(), descriptionEditText.getText().toString(), mNodeShape, mColorId );
+                    addNode( mDownX, mDownY, nameEditText.getText().toString(), descriptionEditText.getText().toString(), mNodeShape, mColorId,mNodeRadius );
                     lastSelectedNodeColor = mColorId;
                     lastSelectedNodeShape = mNodeShape;
+                    lastSelectedNodeRadius = mNodeRadius;
                 }
                 else{
                     (mLongClicked).setTitle( nameEditText.getText().toString() );
@@ -465,13 +483,17 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
 
                     if(mLongClicked instanceof Node) {
                         ((Node)mLongClicked).setShape(mNodeShape);
+                        ((Node)mLongClicked).setR(mNodeRadius);
                         lastSelectedNodeColor = mColorId;
                         lastSelectedNodeShape = mNodeShape;
+                        lastSelectedNodeRadius = mNodeRadius;
                     }
                     else {
                         ((Edge) mLongClicked).setArrowShape(mArrowShape);
+                        ((Edge) mLongClicked).setEdgeStrokeWidth(mEdgeStrokeWidth);
                         lastSelectedEdgeColor = mColorId;
                         lastSelectedArrowShape = mArrowShape;
+                        lastSelectedStrokeWidth = mEdgeStrokeWidth;
                     }
 
                 }
@@ -661,6 +683,57 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                 }
             } );
             shapeLinearLayout.addView( noArrowButton );
+
+            ArrayList<String> spinnerArray = new ArrayList<String>();
+            spinnerArray.add(getResources().getString(R.string.edgehalf ));
+            spinnerArray.add(getResources().getString(R.string.edgecurrent ));
+            spinnerArray.add(getResources().getString(R.string.edgedouble ));
+            spinnerArray.add(getResources().getString(R.string.size ));
+            Spinner spinner = new Spinner(mContext);
+
+            ArrayAdapter<String> adapter = new ArrayAdapter<String>(mContext, android.R.layout.simple_spinner_dropdown_item,spinnerArray) {
+
+                @Override
+                public View getView(int position, View convertView, ViewGroup parent) {
+
+                    View v = super.getView(position, convertView, parent);
+                    if (position == getCount()) {
+                        ((TextView)v.findViewById(android.R.id.text1)).setText("");
+                        ((TextView)v.findViewById(android.R.id.text1)).setHint(getItem(getCount()));
+                    }
+
+                    return v;
+                }
+
+                @Override
+                public int getCount() {
+                    return super.getCount()-1; // you dont display last item. It is used as hint.
+                }
+
+            };
+
+            spinner.setAdapter(adapter);
+            spinner.setSelection(adapter.getCount());
+            spinner.setOnItemSelectedListener( new Spinner.OnItemSelectedListener(){
+                @Override
+                public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id) {
+                    switch (position){
+                        case 0:
+                            mEdgeStrokeWidth /= 2;
+                            break;
+                        case 1:
+                            mEdgeStrokeWidth *= 1;
+                            break;
+                        case 2:
+                            mEdgeStrokeWidth *= 2;
+                            break;
+                    }
+                }
+                @Override
+                public void onNothingSelected(AdapterView<?> arg0) {
+                }
+            } );
+            shapeLinearLayout.addView(spinner);
         }
         else{
             final ImageButton circleShapeButton = new ImageButton( mContext );
@@ -718,7 +791,64 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     diamondShapeButton.setBackgroundColor(getResources().getColor(R.color.transparent50grey ));
                 }
             } );
+
             shapeLinearLayout.addView( diamondShapeButton );
+
+            ArrayList<String> spinnerArray = new ArrayList<String>();
+            spinnerArray.add(getResources().getString(R.string.nodehalf ));
+            spinnerArray.add(getResources().getString(R.string.nodecurrent ));
+            spinnerArray.add(getResources().getString(R.string.nodedouble ));
+            spinnerArray.add(getResources().getString(R.string.nodewrapText ));
+            spinnerArray.add(getResources().getString(R.string.size ));
+
+            Spinner spinner = new Spinner(mContext);
+            ArrayAdapter<String> adapter = new ArrayAdapter<String>(mContext, android.R.layout.simple_spinner_dropdown_item,spinnerArray) {
+
+                @Override
+                public View getView(int position, View convertView, ViewGroup parent) {
+
+                    View v = super.getView(position, convertView, parent);
+                    if (position == getCount()) {
+                        ((TextView)v.findViewById(android.R.id.text1)).setText("");
+                        ((TextView)v.findViewById(android.R.id.text1)).setHint(getItem(getCount()));
+                    }
+
+                    return v;
+                }
+
+                @Override
+                public int getCount() {
+                    return super.getCount()-1; // you dont display last item. It is used as hint.
+                }
+
+            };
+
+            spinner.setAdapter(adapter);
+            spinner.setSelection(adapter.getCount());
+
+            spinner.setOnItemSelectedListener( new Spinner.OnItemSelectedListener(){
+                @Override
+                public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id) {
+                    switch (position){
+                        case 0:
+                            mNodeRadius /= 2;
+                            break;
+                        case 1:
+                            mNodeRadius *= 1;
+                            break;
+                        case 2:
+                            mNodeRadius *= 2;
+                            break;
+                        case 3:
+                            mNodeRadius = Node.NODE_RADIUS_WARP_TEXT;
+                            break;
+                    }
+                }
+                @Override
+                public void onNothingSelected(AdapterView<?> arg0) {
+                }
+            } );
+            shapeLinearLayout.addView(spinner);
         }
 
         detailsAlertDialog.show();
@@ -805,6 +935,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     public ArrayList<MindMapDrawable> getAllClassDrawables() {
         return mAllViewDrawables;
     }
+
 
     /**
      * @return a Bitmap object containing this View's items

@@ -1,4 +1,4 @@
-package com.mindmap.fastuml;
+package com.mindmap.expressFlowchart;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -27,10 +27,10 @@ public class Edge implements MindMapDrawable{
     private String mDescription  = "";
     private ArrowShape mArrowShape = ArrowShape.NONE;
     //Not Saved in Json
-    private static final int DEFAULT_STROKE_WIDTH = 12,DEFAULT_EDGE_COLOR = Color.RED;
-    private static final float DEFAULT_CURSOR_RADIUS = 30, DEFAULT_CURSOR_STROKE_WIDTH = 4f;
-    private static final int DEFAULT_TEXT_COLOR = Color.BLACK;
-    private static final int DEFAULT_TEXT_SIZE = 40;
+    public static final int DEFAULT_STROKE_WIDTH = 14,DEFAULT_EDGE_COLOR = Color.RED,MIN_STROKE_WIDTH = 10;
+    public static final float DEFAULT_CURSOR_RADIUS = 30, DEFAULT_CURSOR_STROKE_WIDTH = 4f;
+    public static final int DEFAULT_TEXT_COLOR = Color.BLACK;
+    public static final int DEFAULT_TEXT_SIZE = 40;
 
     private Path mPath,mStartCursorPath,mEndCursorPath;
     private Paint mPaint,mCursorPaint,mTitlePaint, mArrowHeadFillPaint;
@@ -71,12 +71,6 @@ public class Edge implements MindMapDrawable{
     @Override
     public void setTitle(String title){
         mTitle = title;
-//        Rect boundTitle = new Rect()
-//        mTitlePaint.getTextBounds(title, 0, title.length(), boundTitle);
-//        //Add ... if title size exceeds the length of edge
-//        float length = (float)Math.sqrt((mStartX-mEndX)*(mStartX-mEndX) + (mStartY-mEndY)*(mStartY-mEndY));
-//        if(length<boundTitle.width()) {
-//            mR = boundTitle.width() / 2;
         }
 
     @Override
@@ -153,6 +147,7 @@ public class Edge implements MindMapDrawable{
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setStyle(Paint.Style.STROKE);
         mPath = new Path();
+
         mCursorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mCursorPaint.setStyle(Paint.Style.STROKE);
         mCursorPaint.setStrokeJoin(Paint.Join.MITER);
@@ -165,12 +160,13 @@ public class Edge implements MindMapDrawable{
         mEdgeStrokeWidth = (int)(DEFAULT_STROKE_WIDTH*mCurrentScale);
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
         mCursorPaint.setColor( mEdgeColorID );
+
         mTitlePaint= new Paint();
         mTitlePaint.setColor( DEFAULT_TEXT_COLOR );
-
         mTextSize = DEFAULT_TEXT_SIZE;
         mTitlePaint.setTextSize(mTextSize);
         mTitlePaint.setTextAlign(Paint.Align.CENTER);
+
         mArrowHeadFillPaint = new Paint();
         mArrowHeadFillPaint.setStyle(Paint.Style.FILL);
         mArrowHeadFillPaint.setColor(mEdgeColorID);
@@ -277,6 +273,7 @@ public class Edge implements MindMapDrawable{
         mPath.moveTo( start.x, start.y );
         mPath.quadTo( start.x, start.y, end.x, end.y );
         mPaint.setColor( mEdgeColorID );
+        mPaint.setStrokeWidth( mEdgeStrokeWidth );
         canvas.drawPath( mPath,  mPaint);
 
 
@@ -298,7 +295,7 @@ public class Edge implements MindMapDrawable{
             mPath.moveTo(end.x, end.y);
             mPath.quadTo(end.x, end.y, start.x,start.y);
         }
-        float voffset = 3*mEdgeStrokeWidth;
+        float voffset = 3.5f*mEdgeStrokeWidth;
         if(mCurrentScale<1)
             voffset/=mCurrentScale;
         canvas.drawTextOnPath(reduceText(mTitle,start,end),mPath,0,voffset,mTitlePaint );
@@ -421,24 +418,12 @@ public class Edge implements MindMapDrawable{
     }
 
     public boolean contains(float x, float y){
-//        if(Editable){
-//            if((x-mStartX)*(x-mStartX) + (y-mStartY)*(y-mStartY) <= 5*DEFAULT_CURSOR_RADIUS*DEFAULT_CURSOR_RADIUS)
-//                return true;
-//            if((x-mEndX)*(x-mEndX) + (y-mEndY)*(y-mEndY) <= 5*DEFAULT_CURSOR_RADIUS*DEFAULT_CURSOR_RADIUS)
-//                return true;
-//            return false;
-//        }
-
-        //comparing perpendicular distance from the line
-        if(mStartX==mEndX) {
-            if (x - mStartX <= 5*mEdgeStrokeWidth)
-                return true;
-            return false;
-        }
-        float slope = (mEndY - mStartY)/(mEndX - mStartX);
-        if(Math.abs((slope*x - y + mStartY-slope*mStartX)/Math.sqrt(1+slope*slope))<=5*mEdgeStrokeWidth)
-            return true;
-        return false;
+        PointF leftTop = new PointF((float)Math.min(mEndX-3*mEdgeStrokeWidth,mStartX-3*mEdgeStrokeWidth),
+                                    (float)Math.min(mEndY+3*mEdgeStrokeWidth,mStartY-3*mEdgeStrokeWidth));
+        PointF rightBottom = new PointF((float)Math.max(mStartX+3*mEdgeStrokeWidth,mEndX+3*mEdgeStrokeWidth),
+                                        (float)Math.max(mStartY+3*mEdgeStrokeWidth,mEndY+3*mEdgeStrokeWidth));
+        RectF point =new RectF(x-0.1f,y-0.1f,x+0.1f,y+0.1f);
+        return point.intersect(new RectF( leftTop.x,leftTop.y,rightBottom.x,rightBottom.y ));
     }
 
     @Override
@@ -473,6 +458,10 @@ public class Edge implements MindMapDrawable{
         mEndX = mEndX+shiftX;
         mStartY = mStartY+ shiftY;
         mEndY = mEndY+shiftY;
+    }
+
+    public void setEdgeStrokeWidth(float edgeStrokeWidth) {
+        this.mEdgeStrokeWidth = Math.max(MIN_STROKE_WIDTH,edgeStrokeWidth);
     }
 
     @Override
@@ -599,5 +588,7 @@ public class Edge implements MindMapDrawable{
         canvas.drawPath(outlinePath, mArrowHeadFillPaint );
     }
 
-
+    public float getEdgeStrokeWidth() {
+        return mEdgeStrokeWidth;
+    }
 }

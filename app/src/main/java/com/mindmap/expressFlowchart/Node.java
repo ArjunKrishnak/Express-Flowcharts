@@ -1,4 +1,4 @@
-package com.mindmap.fastuml;
+package com.mindmap.expressFlowchart;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -24,10 +24,11 @@ public class Node implements MindMapDrawable{
     Paint mPaint;
     Path mPath;
     Paint mTitlePaint;
-    private static final int DEFAULT_NODE_COLOR = Color.BLUE;
-    public static final float DEFAULT_NODE_RADIUS = 100;//making it available for MainActivity for new node creation
-    private static final int DEFAULT_TITLE_COLOR = Color.BLACK;
-    private static final int DEFAULT_TEXT_SIZE = 40;
+    public static final int DEFAULT_NODE_COLOR = Color.BLUE;
+    public static final float DEFAULT_NODE_RADIUS = 100;
+    public static final float NODE_RADIUS_WARP_TEXT = -100;
+    public static final int DEFAULT_TITLE_COLOR = Color.BLACK;
+    public static final int DEFAULT_TEXT_SIZE = 40;
     //Node state variables
     private MainView mParentView;
     private float mCurrentScale = 1f;
@@ -86,6 +87,14 @@ public class Node implements MindMapDrawable{
         if(length==title.length())
             return title;
         return title.substring(0,length-3)+"...";
+    }
+
+    public void wrapText(){
+        String dummyTitle = mTitle + "....";//for taking care of padding
+        Rect boundTitle = new Rect();
+        mTitlePaint.getTextBounds(dummyTitle, 0, dummyTitle.length(), boundTitle);
+        //wrap the node radius as required by the title
+        mR = (boundTitle.width()/2);
     }
 
     @Override
@@ -295,6 +304,14 @@ public class Node implements MindMapDrawable{
         if(string.equals(NodeShape.CIRCLE.toString()))
             return NodeShape.CIRCLE;
         return NodeShape.SQUARE;
+    }
+
+    public void setR(float radius) {
+        if(radius==Node.NODE_RADIUS_WARP_TEXT && mTitle.length()!=0) {
+            wrapText();
+        }
+        else if(radius>0)
+            this.mR = radius;
     }
 
     /**

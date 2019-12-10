@@ -1,4 +1,4 @@
-package com.mindmap.fastuml;
+package com.mindmap.expressFlowchart;
 
 import android.content.Context;
 import android.graphics.Bitmap;

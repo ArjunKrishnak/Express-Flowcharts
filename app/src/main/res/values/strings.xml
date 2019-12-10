@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">FastUML</string>
+    <string name="app_name">Express Flowchart</string>
 
     <!--New Alert Dialog-->
     <string name="new_diagram_dialog_title">New diagram</string>
@@ -24,7 +24,7 @@
     <string name="no_str">No</string>
     <string name="ok_str">OK</string>
     <string name="done_str">Done</string>
-    <string name="cancel_str">Cancel</string>
+    <string name="cancel_str">Close</string>
 
     <!--Loading-->
     <string name="pick_file_title">Pick a file</string>
@@ -41,21 +41,22 @@
     <string name="edit_node">Edit node</string>
     <string name="edit_edge">Edit edge</string>
     <string name="delete_button">Delete</string>
+    <string name="new_working_area">New working area</string>
 
     <!--Options Menu-->
-    <string name="menu_export">Export</string>
-    <string name="menu_save">Save</string>
-    <string name="menu_open">Open</string>
-    <string name="menu_new">New</string>
-    <string name="menu_delete">Delete</string>
+    <string name="menu_export">Export as image</string>
+    <string name="menu_save">Save sheet</string>
+    <string name="menu_open">Open sheet</string>
+    <string name="menu_new">New sheet</string>
+    <string name="menu_delete">Delete sheet</string>
     <string name="menu_about">About</string>
     <string name="menu_help">Help</string>
 
-    <!--Export Dialog-->
-    <string name="export">Export</string>
-    <string name="export_dialog_title">Export image</string>
-    <string name="export_dialog_body">Enter a name for the image.</string>
-    <string name="export_success_toast">Image saved to your gallery.</string>
+    <!--preferences-->
+    <string name="preference_file_name">"EF_preferences"</string>
+    <string name="launching_time">launching_app_first_time</string>
+
+
 
     <!--about-->
     <string name="about_text_created_by" >"Developed and designed by Arjun Krishna"</string>
@@ -76,14 +77,35 @@
     <string name="permission_necessary_title">Write permission necessary!</string>
     <string name="permission_necessary_message">Storage write permission is necessary to export.</string>
 
-
-    <string name="successfully_exported">File exported to galley.</string>
+    <!--Export Dialog-->
+    <string name="export">Export</string>
+    <string name="export_dialog_title">Export image</string>
+    <string name="export_dialog_body">Enter a name for the image.</string>
+    <string name="export_success_toast">Image saved to your gallery.</string>
+    <string name="successfully_exported">File exported to gallery.</string>
     <string name="file_saved_in">File saved in :</string>
     <string name="file_saved_successfully">File saved successfully.</string>
     <string name="nothing_to_export">Nothing to export.</string>
     <string name="file_deleted">File Deleted.</string>
     <string name="file_not_deleted">File not deleted.</string>
     <string name="file_name_required">"Please enter file name!"</string>
+
+    <!--spinner-->
+    <string name="nodehalf">Half</string>
+    <string name="nodecurrent">Current</string>
+    <string name="nodedouble">Double</string>
+    <string name="nodewrapText">Wrap text</string>
+    <string name="edgehalf">Half</string>
+    <string name="edgecurrent">Current</string>
+    <string name="edgedouble">Double</string>
+    <string name="size">Size</string>
+
+    <!--ads-->
+    <string name="admob_app_id">ca-app-pub-6846320903215569~5977526270</string>
+    <string name="admob_interstitial_id">ca-app-pub-6846320903215569/3026223012</string>
+
+    <string name="welcome_text">Welcome!</string>
+    <string name="export_notification_title">Exporting image</string>
 
 
 </resources>
