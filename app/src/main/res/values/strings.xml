@@ -105,7 +105,6 @@
     <string name="admob_interstitial_id">ca-app-pub-6846320903215569/3026223012</string>
 
     <string name="welcome_text">Welcome!</string>
-    <string name="export_notification_title">Exporting image</string>
 
 
 </resources>

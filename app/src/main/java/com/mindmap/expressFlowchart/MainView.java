@@ -3,7 +3,6 @@ package com.mindmap.expressFlowchart;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -29,7 +28,6 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.core.content.ContextCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -74,6 +72,7 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
     private int lastSelectedNodeColor = Color.BLUE;
     private int lastSelectedEdgeColor = Color.BLACK;
     private ArrowShape lastSelectedArrowShape = ArrowShape.NONE;
+    //these are values corresponding to scale 1
     private float lastSelectedNodeRadius = Node.DEFAULT_NODE_RADIUS;
     private float lastSelectedStrokeWidth = Edge.DEFAULT_STROKE_WIDTH;
 
@@ -246,12 +245,11 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         postInvalidate();
     }
 
-    public void addNode(float x,float y,String title,String description,NodeShape shape,int color,float mNodeRadius){
+    public void addNode(float x,float y,String title,String description,NodeShape shape,int color,float nodeRadius){
         Node node = new Node(x,y,this,title, description,shape);
         node.set( x,y);
         node.setColorID(color);
-        if(mNodeRadius==Node.NODE_RADIUS_WARP_TEXT)
-            node.setR(mNodeRadius);
+        node.setR(nodeRadius);
         addDrawable(node);
     }
     @Override
@@ -373,7 +371,10 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                        mEdge.setFromNode((Node)mClicked);
                        mEdge.setArrowShape(lastSelectedArrowShape);
                        mEdge.setColorID(lastSelectedEdgeColor);
-                       mEdge.setEdgeStrokeWidth(lastSelectedStrokeWidth);
+                       if(mScaleFactor!=0)
+                           mEdge.setEdgeStrokeWidth(lastSelectedStrokeWidth*mScaleFactor);
+                       else
+                           mEdge.setEdgeStrokeWidth(Edge.DEFAULT_STROKE_WIDTH);
                        mAllViewDrawables.add( mEdge );
                        mViewTask = ViewTask.MOVE_EDGE;
                        savePending = true;
@@ -461,7 +462,10 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
         if(mLongClicked == null){
             mColorId = lastSelectedNodeColor;
             mNodeShape = lastSelectedNodeShape;
-            mNodeRadius=lastSelectedNodeRadius;
+            if(mScaleFactor!=0)
+                mNodeRadius = lastSelectedNodeRadius*mScaleFactor;
+            else
+                mNodeRadius = Node.DEFAULT_NODE_RADIUS;
         }
 
         final ImageButton setButton = detailsLayout.findViewById(R.id.set_button );
@@ -474,7 +478,10 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                     addNode( mDownX, mDownY, nameEditText.getText().toString(), descriptionEditText.getText().toString(), mNodeShape, mColorId,mNodeRadius );
                     lastSelectedNodeColor = mColorId;
                     lastSelectedNodeShape = mNodeShape;
-                    lastSelectedNodeRadius = mNodeRadius;
+                    if(mScaleFactor!=0)
+                        lastSelectedNodeRadius = mNodeRadius/mScaleFactor;
+                    else
+                        lastSelectedNodeRadius = Node.DEFAULT_NODE_RADIUS;
                 }
                 else{
                     (mLongClicked).setTitle( nameEditText.getText().toString() );
@@ -486,14 +493,20 @@ public class MainView extends View implements View.OnClickListener,View.OnLongCl
                         ((Node)mLongClicked).setR(mNodeRadius);
                         lastSelectedNodeColor = mColorId;
                         lastSelectedNodeShape = mNodeShape;
-                        lastSelectedNodeRadius = mNodeRadius;
+                        if(mScaleFactor!=0)
+                            lastSelectedNodeRadius = mNodeRadius/mScaleFactor;
+                        else
+                            lastSelectedNodeRadius = Node.DEFAULT_NODE_RADIUS;
                     }
                     else {
                         ((Edge) mLongClicked).setArrowShape(mArrowShape);
                         ((Edge) mLongClicked).setEdgeStrokeWidth(mEdgeStrokeWidth);
                         lastSelectedEdgeColor = mColorId;
                         lastSelectedArrowShape = mArrowShape;
-                        lastSelectedStrokeWidth = mEdgeStrokeWidth;
+                        if(mScaleFactor!=0)
+                            lastSelectedStrokeWidth = mEdgeStrokeWidth/mScaleFactor;
+                        else
+                            lastSelectedStrokeWidth = Edge.DEFAULT_STROKE_WIDTH;
                     }
 
                 }

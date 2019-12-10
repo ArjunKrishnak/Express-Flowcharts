@@ -8,11 +8,8 @@ import androidx.core.content.ContextCompat;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -49,7 +46,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean mAdCalledByNew;
     ViewGroup mRoot;
     View mOptions;
-    private String CHANNEL_ID = "Foreground export service channel";
 
 
     @Override
@@ -64,8 +60,6 @@ public class MainActivity extends AppCompatActivity {
         // Hide action bar
         ActionBar actionBar = getSupportActionBar();
         actionBar.hide();
-
-        createNotificationChannel();
 
         LayoutInflater layoutInflater = (LayoutInflater) getSystemService( Context.LAYOUT_INFLATER_SERVICE);
         setContentView( R.layout.activity_main);
@@ -639,16 +633,4 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel serviceChannel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "Export service channel",
-                    NotificationManager.IMPORTANCE_DEFAULT
-            );
-
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            manager.createNotificationChannel(serviceChannel);
-        }
-    }
 }

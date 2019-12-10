@@ -157,7 +157,7 @@ public class Edge implements MindMapDrawable{
         mEdgeColorID = DEFAULT_EDGE_COLOR;
         mPaint.setColor( mEdgeColorID );
         mCurrentScale = mParentView.mScaleFactor;
-        mEdgeStrokeWidth = (int)(DEFAULT_STROKE_WIDTH*mCurrentScale);
+        mEdgeStrokeWidth = (int)(DEFAULT_STROKE_WIDTH);
         mPaint.setStrokeWidth(mEdgeStrokeWidth);
         mCursorPaint.setColor( mEdgeColorID );
 
